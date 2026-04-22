@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "caero_rings:voronoi_tiered",
+      "delegate": {
+        "type": "minecraft:multi_noise",
+        "preset": "minecraft:overworld"
+      },
+      "easy":   "#caero_rings:tier_easy",
+      "medium": "#caero_rings:tier_medium",
+      "hard":   "#caero_rings:tier_hard",
+      "_comment": "Over-seeded because Continents places landmasses emergently — more seeds means each landmass has a high chance of being near a seed of the intended tier. Spawn island (0,0) is easy and that's guaranteed by Continents. Medium seeds are spread in a hexagonal ring at ~2400. Hard seeds are spread at ~4000.",
+      "seeds": [
+        { "x":     0, "z":     0, "tier": "easy"   },
+
+        { "x":  2400, "z":     0, "tier": "medium" },
+        { "x":  1200, "z":  2078, "tier": "medium" },
+        { "x": -1200, "z":  2078, "tier": "medium" },
+        { "x": -2400, "z":     0, "tier": "medium" },
+        { "x": -1200, "z": -2078, "tier": "medium" },
+        { "x":  1200, "z": -2078, "tier": "medium" },
+
+        { "x":  4000, "z":   500, "tier": "hard"   },
+        { "x":  2500, "z":  3200, "tier": "hard"   },
+        { "x":  -800, "z":  4000, "tier": "hard"   },
+        { "x": -3500, "z":  2000, "tier": "hard"   },
+        { "x": -4000, "z":  -800, "tier": "hard"   },
+        { "x": -2000, "z": -3500, "tier": "hard"   },
+        { "x":  1500, "z": -3800, "tier": "hard"   },
+        { "x":  4000, "z": -2000, "tier": "hard"   }
+      ]
+    }
+  }
+}

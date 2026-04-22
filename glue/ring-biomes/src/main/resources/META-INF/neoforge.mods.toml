@@ -1,0 +1,36 @@
+modLoader="kotlinforforge"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Biases biome placement by nearest-seed Voronoi tiering so hand-placed regions of the
+map read as easy / medium / hard difficulty. Wraps vanilla's multi_noise biome source,
+so climate-driven variety (via Terralith) and land/ocean shaping (via Continents) both
+flow through unchanged.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5.9.0,)"
+    ordering="NONE"
+    side="BOTH"

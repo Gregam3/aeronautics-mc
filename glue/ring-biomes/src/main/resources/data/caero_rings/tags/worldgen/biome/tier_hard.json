@@ -1,0 +1,29 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:eroded_badlands",
+    "minecraft:ice_spikes",
+    "minecraft:deep_dark",
+    "terralith:alpha_islands",
+    "terralith:alpha_islands_winter",
+    "terralith:amethyst_canyon",
+    "terralith:amethyst_rainforest",
+    "terralith:ancient_sands",
+    "terralith:caldera",
+    "terralith:glacial_chasm",
+    "terralith:haze_mountain",
+    "terralith:ice_marsh",
+    "terralith:mirage_isles",
+    "terralith:siberian_taiga",
+    "terralith:skylands",
+    "terralith:skylands_autumn",
+    "terralith:skylands_spring",
+    "terralith:skylands_summer",
+    "terralith:skylands_winter",
+    "terralith:snowy_badlands",
+    "terralith:volcanic_crater",
+    "terralith:volcanic_peaks",
+    "terralith:warped_mesa",
+    "terralith:yellowstone"
+  ]
+}
