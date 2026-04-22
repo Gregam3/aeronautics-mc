@@ -105,12 +105,18 @@ world feel genuinely big, so flying somewhere *means* something.
   nearest seed. Uniform tier per landmass, multiple same-tier continents possible,
   hand-designable. Replaces the probabilistic triangular-weight logic. Design in
   `glue/ring-biomes/PLAN.md`.
-- **2026-04-20** — **Continents mod (Stardust Labs) 1.1.13 added.** Provides
-  landmass-and-ocean world shape via density functions; Continents' built-in
-  spawn-island + 4-ring noise architecture dovetails with our Voronoi tiering.
-  Source-verified zero file conflict with our dimension preset.
-  Pillars: #2 (transport matters — oceans force airship travel) +
-  #4 (specialization — distinct continents reinforce "pick a lane").
+- **2026-04-20** — ~~**Continents mod (Stardust Labs) 1.1.13 added.**~~
+  Superseded 2026-04-22 by Tectonic (see entry below). Continents' spawn-island
+  pin is reactivatable via the §7 "patch-density-function" route if desired.
+- **2026-04-22** — **Tectonic 3.0.22 (by Apollounknowndev) replaces Continents.**
+  Tectonic overrides the `noise_router/continents` slot with
+  `tectonic:noise/full_continents`, which bypasses Continents' spawn-island pin
+  and ring layout. Running both, Tectonic's override wins (it loads after
+  Paxi's datapack directory). Chose Tectonic because its dramatic mountains,
+  erosion, ridges, and barriers amplify pillar #1 (Aeronautics-first): overland
+  travel becomes painful, air travel pays off. Tradeoff: no guaranteed spawn
+  island at (0,0); our Voronoi tiering still works — it measures distance,
+  not landmass shape — so tier drapes over wherever Tectonic places land.
 - **2026-04-20** — **Glue mods implemented in Kotlin.** Kotlin For Forge 5.11.0
   added as a runtime dependency. Per-mod loader declared as `kotlinforforge` in
   `neoforge.mods.toml`. No Java code in our glue mods.

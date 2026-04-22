@@ -19,7 +19,8 @@
 | **Create: Aeronautics** | `1.0.3+mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/create-aeronautics) · [GitHub](https://github.com/Creators-of-Aeronautics/Simulated-Project) |
 | **Create: Numismatics** | `1.0.20+neoforge-mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/numismatics) |
 | **Terralith** | `2.5.8` | NeoForge + datapack | 2025-01-15 | [Modrinth](https://modrinth.com/mod/terralith) |
-| **Continents** | `1.1.13` | NeoForge + datapack | 2026-03-29 | [Modrinth](https://modrinth.com/mod/continents) · [GitHub](https://github.com/Stardust-Labs-MC/Continents) |
+| **Tectonic** | `3.0.22-neoforge-21.1` | NeoForge | 2026-04-15 | [Modrinth](https://modrinth.com/mod/tectonic) · [GitHub](https://github.com/Apollounknowndev/tectonic) |
+| ~~Continents~~ | ~~`1.1.13`~~ | ~~datapack~~ | ~~2026-03-29~~ | **Removed 2026-04-22 — conflicts with Tectonic on `noise_router/continents`; Tectonic picked.** |
 | **Distant Horizons** | `3.0.1-b-1.21.1` (beta) | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/distanthorizons) |
 | **Kotlin For Forge** | `5.11.0` | NeoForge | 2026-01-17 | [Modrinth](https://modrinth.com/mod/kotlin-for-forge) |
 
@@ -30,12 +31,18 @@
   1.21.1 — acceptable for server deployment.
 - Numismatics ships a 1.21.1 NeoForge build from the same author as Create — native
   Create integration (coin printing via Create machines).
-- **Continents** overrides only two density-function files
-  (`worldgen/density_function/overworld/{base_continents,continents}.json`) and uses
-  a spawn-island + 4-ring internal architecture. Verified by source inspection at
-  `.research/repos/continents/` — no file conflict with our Voronoi dimension
-  preset. Continents decides land/ocean; Terralith fills land with biome variety;
-  our glue mod assigns tiers via Voronoi seeds.
+- **Tectonic** overrides `noise_router/{continents,erosion,ridges,barrier,…}`
+  and the `temperature`/`vegetation` density functions. Source-verified at
+  `.research/repos/tectonic/`. Produces dramatic mountains, deep canyons, and
+  cliff terrain across all landmasses. No file conflict with our Voronoi
+  dimension preset (we touch the biome source, Tectonic touches elevation
+  density). Tectonic decides land shape + elevation drama; Terralith fills
+  land with biome variety; our glue mod assigns tiers via Voronoi seeds —
+  tiers are distance-based, so they work regardless of landmass shape.
+- ~~Continents~~: dropped 2026-04-22. Tectonic's continents override wins when
+  both are loaded, making Continents' spawn-island pin a no-op. A
+  "patch-the-override from caero_rings" workaround is documented in
+  `glue/ring-biomes/PLAN.md` §10 for future consideration.
 - **Kotlin For Forge (KFF)** is required at runtime by our glue mods (they're
   written in Kotlin). Installed once on the server; all players need it in their
   mod folder.

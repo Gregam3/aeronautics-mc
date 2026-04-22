@@ -2,8 +2,9 @@
 
 **Mod ID:** `caero_rings` (folder still named `ring-biomes/` for continuity — the
 mod evolved from a ring-math design to Voronoi seeds)
-**Target:** Minecraft 1.21.1 · NeoForge · Kotlin 2.0.21 via KFF 5.11.0
-**Status:** First build passing locally. No in-game verification yet (Greg's turf).
+**Target:** Minecraft 1.21.1 · NeoForge 21.1.227 · Kotlin 2.3.0 via KFF 5.11.0
+**Status:** 2026-04-22 — `./gradlew build` green (20/20 JUnit tests pass), jar
+at `build/libs/caero_rings-0.1.0.jar`. No in-game verification yet (Greg's turf).
 **Must ship before first world-gen** — this mod only takes effect at world creation.
 
 ---
@@ -153,12 +154,19 @@ glue/ring-biomes/
 ├── settings.gradle
 ├── gradle/
 ├── gradlew
+├── deploy.sh                                  (builds + copies jar into PrismLauncher instance)
+├── tools/
+│   └── render_map.py                          (offline Voronoi preview renderer)
+├── renders/                                   (generated PNGs, gitignored if desired)
+│   ├── tier_voronoi.png
+│   └── tier_voronoi_annotated.png
 ├── src/
 │   ├── main/
 │   │   ├── kotlin/com/caero/rings/
 │   │   │   ├── CaeroRings.kt                  (mod entry, registers codec)
 │   │   │   ├── Tier.kt                        (enum + Codec)
-│   │   │   └── VoronoiTieredBiomeSource.kt    (biome source + Seed + CODEC)
+│   │   │   ├── VoronoiSeedMath.kt             (pure-kotlin Seed + nearestSeedOf — unit-testable)
+│   │   │   └── VoronoiTieredBiomeSource.kt    (biome source + CODEC)
 │   │   └── resources/
 │   │       ├── META-INF/neoforge.mods.toml
 │   │       ├── pack.mcmeta
@@ -172,3 +180,44 @@ glue/ring-biomes/
 │       └── VoronoiTieredBiomeSourceTest.kt
 └── PLAN.md (this file)
 ```
+
+---
+
+## 10. Continents restoration patch (deferred)
+
+If we ever want Continents' spawn-island pin back while keeping Tectonic's
+dramatic terrain, the fix is a single datapack file shipped from this mod:
+
+```
+src/main/resources/data/minecraft/worldgen/density_function/overworld/noise_router/continents.json
+```
+
+Contents would point the noise router back at the Continents-modified base
+continents density function (or at a `min`/`max` merge of Tectonic's and
+Continents' continent shapes). Load-order caveat: our mod's resources need to
+win over Tectonic's — confirmed easiest by shipping the override as a separate
+Paxi datapack zip instead of in our mod jar, since Paxi loads after bundled
+mod resources. Not implemented as of 2026-04-22; Greg explicitly chose
+Tectonic-only.
+
+---
+
+## 11. 2026-04-22 changes
+
+- **Kotlin plugin bumped 2.0.21 → 2.3.0.** KFF 5.11.0 now pulls kotlin-stdlib
+  2.3.0 transitively, which 2.0.21 cannot read (`kotlin_module` metadata
+  version 2.3.0 > 2.0 compiler cap). Test dep bumped to match.
+- **Seed + `nearestSeedOf` extracted to `VoronoiSeedMath.kt`.** Previously
+  they lived on `VoronoiTieredBiomeSource`'s companion. Accessing them
+  forced loading `BiomeSource`, whose static init needs
+  `Bootstrap.bootStrap()` + NeoForge's `LoadingModList` — not available
+  in plain JUnit. Making them top-level keeps the test suite pure.
+- **`CaeroRings.VORONOI_TIERED` register call wrapped in explicit
+  `Supplier`.** Kotlin 2.3 can't disambiguate the lambda between
+  `register(String, Supplier)` and `register(String, Function<ResourceLocation, ...>)`.
+- **Offline Voronoi renderer added** at `tools/render_map.py` (pure
+  Pillow, no numpy/matplotlib). Run from this directory:
+  `python3 tools/render_map.py` → writes `renders/tier_voronoi{,_annotated}.png`.
+- **Deploy script added** at `deploy.sh`. Default target instance is
+  `aeronautics-1.21.1` under `~/.local/share/PrismLauncher/instances/`;
+  override with `PRISM_INSTANCE=<name> ./deploy.sh`.

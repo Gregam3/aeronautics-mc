@@ -12,7 +12,9 @@
       "easy":   "#caero_rings:tier_easy",
       "medium": "#caero_rings:tier_medium",
       "hard":   "#caero_rings:tier_hard",
-      "_comment": "Over-seeded because Continents places landmasses emergently — more seeds means each landmass has a high chance of being near a seed of the intended tier. Spawn island (0,0) is easy and that's guaranteed by Continents. Medium seeds are spread in a hexagonal ring at ~2400. Hard seeds are spread at ~4000.",
+      "medium_min_radius": 1500,
+      "hard_min_radius": 1500,
+      "_comment": "Voronoi picks nearest seed; *_min_radius fields then floor the tier so we guarantee an easy core even when a medium seed is closer than origin. medium_min_radius=1500 means no medium inside 1500 blocks; hard_min_radius=1500 means no hard inside 1500. Raise hard_min_radius (e.g. to 3000) if you want a dedicated medium ring before hard kicks in. Medium seeds hexagonal at r=2400; hard seeds hand-placed at r~4000.",
       "seeds": [
         { "x":     0, "z":     0, "tier": "easy"   },
 

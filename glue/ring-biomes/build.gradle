@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm' version '2.0.21'
+    id 'org.jetbrains.kotlin.jvm' version '2.3.0'
     id 'net.neoforged.gradle.userdev' version '7.1.25'
 }
 
@@ -110,7 +110,7 @@ dependencies {
     // JUnit 5 for pure-Kotlin unit tests (not gametests — those run via runGameTestServer)
     testImplementation platform("org.junit:junit-bom:5.10.2")
     testImplementation "org.junit.jupiter:junit-jupiter"
-    testImplementation "org.jetbrains.kotlin:kotlin-test-junit5:2.0.21"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit5:2.3.0"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 
     // Example optional mod dependency with JEI
