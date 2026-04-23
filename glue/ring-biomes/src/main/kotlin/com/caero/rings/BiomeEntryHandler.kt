@@ -38,9 +38,11 @@ object BiomeEntryHandler {
 
     private const val CHECK_INTERVAL_TICKS = 10
 
-    private data class Last(val biome: ResourceLocation?, val tick: Int)
+    private data class Last(val biome: ResourceLocation?, val tick: Int, val stableCount: Int = 0)
 
     private val lastSeen: MutableMap<UUID, Last> = HashMap()
+
+    private const val STABLE_THRESHOLD = 3
 
     // One-time gap log per biome id so the log isn't spammed — we just want a
     // single "hey, this biome has no tier tag" ping per session per biome.
@@ -61,16 +63,20 @@ object BiomeEntryHandler {
         val current: ResourceLocation = holder.unwrapKey().map { it.location() }.orElse(null) ?: return
 
         if (prev?.biome == current) {
-            lastSeen[player.uuid] = Last(current, tick)
+            lastSeen[player.uuid] = Last(current, tick, (prev.stableCount + 1).coerceAtMost(STABLE_THRESHOLD + 1))
             return
         }
-        lastSeen[player.uuid] = Last(current, tick)
 
-        // First tick after login: record but don't announce — avoids a spurious
-        // banner on every respawn / relog.
+        // Biome changed — reset stability counter
+        val newStable = 1
+        lastSeen[player.uuid] = Last(current, tick, newStable)
+
         if (prev == null) return
 
-        sendBiomeEntry(player, holder, current)
+        // Only show label if the previous biome was stable (not flickering)
+        if (prev.stableCount >= STABLE_THRESHOLD) {
+            sendBiomeEntry(player, holder, current)
+        }
     }
 
     private fun sendBiomeEntry(player: ServerPlayer, holder: Holder<Biome>, key: ResourceLocation) {
@@ -80,7 +86,7 @@ object BiomeEntryHandler {
         // render as the raw key. Path-derived names always render correctly.
         val line = Component.literal(prettify(key.path))
             .append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY))
-            .append(tierComponent(holder, key))
+            .append(tierComponent(player, holder, key))
 
         // Action bar: single-line, above the hotbar, small font, auto-fades.
         // Chosen over title/subtitle because the title font is too large for
@@ -88,22 +94,37 @@ object BiomeEntryHandler {
         player.connection.send(ClientboundSetActionBarTextPacket(line))
     }
 
-    private fun tierComponent(holder: Holder<Biome>, key: ResourceLocation): Component {
+    private fun tierComponent(player: ServerPlayer, holder: Holder<Biome>, key: ResourceLocation): Component {
         val (label, colour) = when {
             holder.`is`(TIER_EASY) -> "Easy" to ChatFormatting.GREEN
             holder.`is`(TIER_MEDIUM) -> "Medium" to ChatFormatting.GOLD
             holder.`is`(TIER_HARD) -> "Hard" to ChatFormatting.RED
             else -> {
-                // Every biome SHOULD be in a tier tag. If we land here, the tag
-                // file is missing that id. Log once per biome per session so
-                // Greg can report it and we can add the entry.
+                // Oceans, rivers, beaches, caves — not in any tier tag so they
+                // pass through substitution untouched. For display, derive tier
+                // from distance to origin (same logic as the biome source floors).
                 if (loggedUntieredBiomes.add(key)) {
-                    LOGGER.warn("caero_rings: biome '{}' is not in any tier tag", key)
+                    LOGGER.info("caero_rings: biome '{}' not in tier tag, using distance-based tier for display", key)
                 }
-                "untiered" to ChatFormatting.GRAY
+                distanceTier(player)
             }
         }
         return Component.literal(label).withStyle(colour)
+    }
+
+    private fun distanceTier(player: ServerPlayer): Pair<String, ChatFormatting> {
+        val x = player.blockX.toLong()
+        val z = player.blockZ.toLong()
+        val distSq = x * x + z * z
+        val medSq = VoronoiTieredBiomeSource.DEFAULT_MEDIUM_MIN_RADIUS.toLong() *
+                VoronoiTieredBiomeSource.DEFAULT_MEDIUM_MIN_RADIUS
+        val hardSq = VoronoiTieredBiomeSource.DEFAULT_HARD_MIN_RADIUS.toLong() *
+                VoronoiTieredBiomeSource.DEFAULT_HARD_MIN_RADIUS
+        return when {
+            distSq < medSq -> "Easy" to ChatFormatting.GREEN
+            distSq < hardSq -> "Medium" to ChatFormatting.GOLD
+            else -> "Hard" to ChatFormatting.RED
+        }
     }
 
     private fun prettify(path: String): String =

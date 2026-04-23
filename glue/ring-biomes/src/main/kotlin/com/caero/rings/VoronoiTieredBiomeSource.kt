@@ -34,6 +34,11 @@ class VoronoiTieredBiomeSource(
     private val easy: HolderSet<Biome>,
     private val medium: HolderSet<Biome>,
     private val hard: HolderSet<Biome>,
+    // Substitution-only subset of `hard`. Display/tierOf use `hard` so rare
+    // biomes (skylands, caldera, etc.) still read Hard when encountered — but
+    // they never get picked as substitution targets, preventing the "flood of
+    // sky islands at the edge" failure mode.
+    private val hardSubstitution: HolderSet<Biome>,
     private val seeds: List<Seed>,
     private val mediumMinRadius: Int,
     private val hardMinRadius: Int,
@@ -56,9 +61,9 @@ class VoronoiTieredBiomeSource(
     override fun getNoiseBiome(x: Int, y: Int, z: Int, sampler: Climate.Sampler): Holder<Biome> {
         if (diagPrinted.compareAndSet(false, true)) {
             LOGGER.info(
-                "caero_rings DIAG: medium_min={} hard_min={} seeds={} easy_size={} medium_size={} hard_size={}",
+                "caero_rings DIAG: medium_min={} hard_min={} seeds={} easy_size={} medium_size={} hard_size={} hard_sub_size={}",
                 mediumMinRadius, hardMinRadius, seeds.size,
-                easy.size(), medium.size(), hard.size()
+                easy.size(), medium.size(), hard.size(), hardSubstitution.size()
             )
         }
 
@@ -110,7 +115,7 @@ class VoronoiTieredBiomeSource(
         val candidates = when (wanted) {
             Tier.EASY -> easy
             Tier.MEDIUM -> medium
-            Tier.HARD -> hard
+            Tier.HARD -> hardSubstitution  // workhorse hard biomes only; rares excluded
         }
         if (candidates.size() == 0) {
             LOGGER.warn(
@@ -121,16 +126,44 @@ class VoronoiTieredBiomeSource(
             return natural
         }
         val target = natural.value().baseTemperature
-        var best: Holder<Biome>? = null
-        var bestDiff = Float.MAX_VALUE
+
+        // Gather candidates within a temperature tolerance of the natural biome.
+        // This keeps picks visually similar to the natural climate (hot→hot, cold→cold)
+        // while giving us a pool to vary from. If nothing is close, fall back to the
+        // single closest.
+        val band = 0.5f
+        val pool = ArrayList<Holder<Biome>>()
+        var closest: Holder<Biome>? = null
+        var closestDiff = Float.MAX_VALUE
         for (candidate in candidates) {
             val diff = abs(candidate.value().baseTemperature - target)
-            if (diff < bestDiff) {
-                bestDiff = diff
-                best = candidate
+            if (diff <= band) pool.add(candidate)
+            if (diff < closestDiff) {
+                closestDiff = diff
+                closest = candidate
             }
         }
-        return best ?: natural
+        if (pool.isEmpty()) return closest ?: natural
+
+        // Deterministic (x, z) hash picks one from the pool so adjacent chunks with
+        // identical climate get different biomes — breaks the "entire ring is
+        // siberian_taiga" failure mode. Position-keyed hashing means the same cell
+        // always resolves the same way, so world-gen is reproducible.
+        val h = hashCell(worldX, worldZ)
+        return pool[(h and Int.MAX_VALUE) % pool.size]
+    }
+
+    /**
+     * Cheap integer hash of a (x, z) cell. Good enough to scatter substitution picks
+     * across the candidate pool without clustering; not a cryptographic primitive.
+     */
+    private fun hashCell(worldX: Int, worldZ: Int): Int {
+        var h = worldX * 0x85EBCA77.toInt()
+        h = h xor (worldZ * 0xC2B2AE3D.toInt())
+        h = h xor (h ushr 16)
+        h *= 0x85EBCA6B.toInt()
+        h = h xor (h ushr 13)
+        return h
     }
 
     companion object {
@@ -152,6 +185,7 @@ class VoronoiTieredBiomeSource(
                 RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("easy").forGetter { it.easy },
                 RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("medium").forGetter { it.medium },
                 RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("hard").forGetter { it.hard },
+                RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("hard_substitution").forGetter { it.hardSubstitution },
                 Seed.CODEC.listOf().fieldOf("seeds").forGetter { it.seeds },
                 Codec.INT.optionalFieldOf("medium_min_radius", DEFAULT_MEDIUM_MIN_RADIUS).forGetter { it.mediumMinRadius },
                 Codec.INT.optionalFieldOf("hard_min_radius", DEFAULT_HARD_MIN_RADIUS).forGetter { it.hardMinRadius },

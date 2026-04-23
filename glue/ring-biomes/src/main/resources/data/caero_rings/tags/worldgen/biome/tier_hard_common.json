@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "_comment": "Substitution-only subset of tier_hard. Biomes whose hardness comes from palette + features, not terrain shape.",
+  "values": [
+    "minecraft:eroded_badlands",
+    "minecraft:ice_spikes",
+    "regions_unexplored:ashen_woodland",
+    "regions_unexplored:arid_mountains",
+    "regions_unexplored:dry_bushland",
+    "regions_unexplored:fungal_fen",
+    "regions_unexplored:joshua_desert",
+    "regions_unexplored:outback",
+    "regions_unexplored:saguaro_desert"
+  ]
+}

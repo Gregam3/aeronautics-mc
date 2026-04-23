@@ -12,6 +12,7 @@
       "easy":   "#caero_rings:tier_easy",
       "medium": "#caero_rings:tier_medium",
       "hard":   "#caero_rings:tier_hard",
+      "hard_substitution": "#caero_rings:tier_hard_common",
       "medium_min_radius": 1500,
       "hard_min_radius": 1500,
       "_comment": "Voronoi picks nearest seed; *_min_radius fields then floor the tier so we guarantee an easy core even when a medium seed is closer than origin. medium_min_radius=1500 means no medium inside 1500 blocks; hard_min_radius=1500 means no hard inside 1500. Raise hard_min_radius (e.g. to 3000) if you want a dedicated medium ring before hard kicks in. Medium seeds hexagonal at r=2400; hard seeds hand-placed at r~4000.",
