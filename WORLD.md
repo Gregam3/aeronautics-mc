@@ -137,7 +137,7 @@ zone by day, active at night. Hard feels actively hostile at all times.
 
 ## 6. World border
 
-Hard border at **±5000** x/z on overworld and end, ±625 on nether (scales 1:8 with overworld per vanilla).
+Hard border at **±5000** x/z on overworld and end, **±2000** on nether (nether is intentionally oversized relative to vanilla's 1:8 scale so there's room to move even with the unified hub).
 
 - Provided by **Serilum's World Border** mod (+ **Collective** dep). No custom code.
 - Config in `config/worldborder.json5`: `shouldLoopToOppositeBorder: false` (bounce-back instead of wrap), teleports player 10 blocks back on contact.
@@ -157,6 +157,7 @@ Players cannot create their own portals. Admins place a small number (target
 - Admin placement: `/caero_placeportal` (op level 2) builds a **7×13** obsidian frame + lit portal at the player's position (centered on the issuer, bottom edge at foot level), oriented perpendicular to their facing. The WoW Dark Portal scale — imposing but not absurd.
 - Custom size: `/caero_placeportal <width> <height>` accepts 4–23 for both dimensions.
 - Existing portals always remain functional — only the ignition event is blocked. `/setblock` and `/fill` also bypass the event for manual builds.
+- **All overworld portals link to one nether hub.** `NetherHub.kt` hooks `EntityTravelToDimensionEvent`: overworld→nether is redirected to (0, 80, 0) in the nether; nether→overworld is redirected back to the player's saved entry point. Admin builds a single portal at the hub (`/caero_placeportal` while standing at nether 0, 80, 0). Return-point is saved in player NBT under `caero_rings.last_ow_{x,y,z}`.
 
 ---
 
