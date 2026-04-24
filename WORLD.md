@@ -157,7 +157,7 @@ Players cannot create their own portals. Admins place a small number (target
 - Admin placement: `/caero_placeportal` (op level 2) builds a **7×13** obsidian frame + lit portal at the player's position (centered on the issuer, bottom edge at foot level), oriented perpendicular to their facing. The WoW Dark Portal scale — imposing but not absurd.
 - Custom size: `/caero_placeportal <width> <height>` accepts 4–23 for both dimensions.
 - Existing portals always remain functional — only the ignition event is blocked. `/setblock` and `/fill` also bypass the event for manual builds.
-- **All overworld portals link to one nether hub.** `NetherHub.kt` hooks `EntityTravelToDimensionEvent`: overworld→nether is redirected to (0, 80, 0) in the nether; nether→overworld is redirected back to the player's saved entry point. Admin builds a single portal at the hub (`/caero_placeportal` while standing at nether 0, 80, 0). Return-point is saved in player NBT under `caero_rings.last_ow_{x,y,z}`.
+- **All overworld portals link to one nether hub.** `NetherHub.kt` lets vanilla do its teleport, then reacts to `PlayerChangedDimensionEvent` and repositions the player *within* the destination dimension (same-dim teleport, no recursion). Overworld→nether lands in front of the hub at `(0.5, 80, 2.5)`. Nether→overworld lands at the player's last known overworld position (updated every 10 ticks while they're on the overworld). **Known cosmetic pollution**: vanilla still auto-creates stub portals at the scaled nether coords no one visits. Harmless but ugly. The hub itself is admin-placed at nether `(0, 80, 0)` via `/caero_placeportal`.
 
 ---
 
