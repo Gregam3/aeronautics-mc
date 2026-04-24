@@ -143,6 +143,15 @@ Hard border at **±5000** x/z on overworld and end, ±625 on nether (scales 1:8 
 - Config in `config/worldborder.json5`: `shouldLoopToOppositeBorder: false` (bounce-back instead of wrap), teleports player 10 blocks back on contact.
 - Applies automatically to every world at boot — no world-creation step required.
 
+## 6a. Nether portals (finite, admin-placed)
+
+Players cannot create their own portals. Admins place a small number (target
+**~8** for 10k×10k / 10 players) by hand at interesting surface locations.
+
+- Blocker: `PlayerPortalBlocker.kt` cancels `BlockEvent.PortalSpawnEvent` for any ignition attempt (includes zombified piglin-lit portals).
+- Admin placement: `/caero_placeportal` (permission level 2) builds a 4×5 obsidian frame + lit portal blocks at the player's position, oriented perpendicular to their facing direction. Use in creative/spectator mode.
+- Existing portals always remain functional — only the ignition event is blocked. `/setblock` and `/fill` also bypass the event for manual builds.
+
 ---
 
 ## 7. Tunable config
