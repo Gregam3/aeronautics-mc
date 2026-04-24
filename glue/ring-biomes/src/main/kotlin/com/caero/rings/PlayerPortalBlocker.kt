@@ -84,10 +84,22 @@ object PlayerPortalBlocker {
             else -> foot
         }
 
+        // Pass 1: place the entire obsidian frame first, so portal blocks
+        // placed later see a complete valid frame and don't self-destruct
+        // via NetherPortalBlock.canSurvive -> PortalShape validation.
         for (wy in 0 until height) {
             for (wx in 0 until width) {
-                val isFrame = wy == 0 || wy == height - 1 || wx == 0 || wx == width - 1
-                level.setBlock(posAt(wx, wy), if (isFrame) obsidian else portal, 3)
+                if (wy == 0 || wy == height - 1 || wx == 0 || wx == width - 1) {
+                    level.setBlock(posAt(wx, wy), obsidian, 3)
+                }
+            }
+        }
+        // Pass 2: fill the interior with portal blocks. Flag 18 = SEND_TO_CLIENTS
+        // | UPDATE_SUPPRESS_DROPS — same flag vanilla PortalShape uses to avoid
+        // cascading neighbor notifications on each placement.
+        for (wy in 1 until height - 1) {
+            for (wx in 1 until width - 1) {
+                level.setBlock(posAt(wx, wy), portal, 18)
             }
         }
         LOGGER.info("caero_rings: placed ${width}x${height} portal at {} axis=$axis", foot)
