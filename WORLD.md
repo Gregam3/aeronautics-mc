@@ -143,6 +143,11 @@ Hard border at **±5000** x/z on overworld and end, ±625 on nether (scales 1:8 
 - Config in `config/worldborder.json5`: `shouldLoopToOppositeBorder: false` (bounce-back instead of wrap), teleports player 10 blocks back on contact.
 - Applies automatically to every world at boot — no world-creation step required.
 
+## 6b. Elytra & shulker boxes (unobtainable)
+
+- **Elytra**: shipped `data/minecraft/structure/end_city/ship.nbt` overrides vanilla. The "Elytra" data-marker metadata at position (6, 5, 7) is renamed to "Removed" so `EndCityPieces.handleDataMarker` no longer spawns the item frame. End ships generate without the elytra frame. `/give` still works for admins.
+- **Shulker boxes**: shipped `data/minecraft/recipe/shulker_box.json` with `neoforge:conditions: [{type: neoforge:false}]` — recipe doesn't register. Shulkers still drop shells, but no crafting path to a box. `/give` still works for admins.
+
 ## 6a. Nether portals (finite, admin-placed)
 
 Players cannot create their own portals. Admins place a small number (target
