@@ -1,10 +1,13 @@
 {
   "_comment": "Master config for caero_rings. Edit values here, run ./scripts/apply-config.sh, then build+deploy.",
   "ore_bias": {
-    "_comment": "Multiplier applied to vanilla ore placed_feature count values per tier. 1.0 = vanilla, 0.5 = half, 2.0 = double. Set to 1.0 to skip tier (no biome modifier generated).",
+    "_comment": "Default count multiplier per tier. 1.0 = vanilla. Per-ore overrides below. Ore 'family' matches the vanilla placed_feature prefix (e.g., 'diamond' covers ore_diamond, ore_diamond_medium, ore_diamond_buried).",
     "easy": 0.75,
     "medium": 1.0,
-    "hard": 1.5
+    "hard": 1.5,
+    "overrides": {
+      "diamond": { "easy": 0.3, "medium": 0.8, "hard": 1.2 }
+    }
   },
   "ore_list": {
     "_comment": "Vanilla overworld ore placed_features that get rescaled. Each gets a scaled variant per non-1.0 tier.",

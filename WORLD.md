@@ -24,6 +24,8 @@ Per-layer plans:
 | Dependency | **Lithostitched** | 1.7.0 | Required by Tectonic for density function modifiers. |
 | Dependency | **Kotlin For Forge** | 5.11.0 | Required by caero_rings (Kotlin mod). |
 | Dependency | **GeckoLib** | 4.8.3 | Required by Born in Chaos for entity animations. |
+| World border | **World Border** (Serilum) | 4.8 | Config-driven hard border. Bounces players back on contact. Defaults to ±5000 overworld/end, ±625 nether (scaled with overworld). |
+| Dependency | **Collective** | 8.20 | Required by World Border. |
 
 ### Why Regions Unexplored over Terralith
 
@@ -133,9 +135,33 @@ zone by day, active at night. Hard feels actively hostile at all times.
 
 ---
 
-## 6. What's next
+## 6. World border
 
-- [ ] **Ore distribution bias per tier** (0.8× easy, 1.2× medium, 2× hard).
+Hard border at **±5000** x/z on overworld and end, ±625 on nether (scales 1:8 with overworld per vanilla).
+
+- Provided by **Serilum's World Border** mod (+ **Collective** dep). No custom code.
+- Config in `config/worldborder.json5`: `shouldLoopToOppositeBorder: false` (bounce-back instead of wrap), teleports player 10 blocks back on contact.
+- Applies automatically to every world at boot — no world-creation step required.
+
+---
+
+## 7. Tunable config
+
+All runtime-tunable caero_rings values live in `glue/ring-biomes/config.json`. Edit + run
+`./deploy.sh` (the script invokes `scripts/apply-config.py` before build to regenerate
+the placed_feature and biome_modifier JSONs).
+
+Current keys:
+- `ore_bias.{easy,medium,hard}` — vanilla ore count multiplier (1.0 skips tier)
+- `bic_spawn_boost.{medium,hard}` — additive BiC spawn weight multiplier
+- `tier_spawn_handler.*` — documented but still Kotlin-hardcoded
+
+---
+
+## 8. What's next
+
+- [x] **Ore distribution bias per tier** — 0.75× easy, 1.0× medium, 1.5× hard. Tunable via `config.json`.
+- [x] **World border** (±5000) — Serilum mod.
 - [ ] **Loot scaling per tier.** Structure loot tables in hard ring drop rare materials.
 - [ ] **Resource uniqueness.** Certain resources only available in medium/hard.
 - [ ] **Glue Mod #1 (Numismatics → OPAC bridge)** still ships before server provisioning.
@@ -143,7 +169,7 @@ zone by day, active at night. Hard feels actively hostile at all times.
 
 ---
 
-## 7. Offline renderer
+## 9. Offline renderer
 
 ```
 cd glue/ring-biomes
@@ -154,7 +180,7 @@ Outputs `renders/tier_voronoi.png` — Voronoi cell tier map at 1px=10 blocks.
 
 ---
 
-## 8. Deploy to PrismLauncher
+## 10. Deploy to PrismLauncher
 
 ```
 cd glue/ring-biomes

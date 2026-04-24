@@ -60,9 +60,11 @@ BIC_SPAWNS_BASE = [
 ]
 
 def format_factor(f):
-    """Turn 0.75 into '0_75x'."""
-    return str(f).replace('.', '_').replace('_0', '') + 'x' if '.' in str(f) and not str(f).endswith('.0') \
-           else f'{int(f)}_0x' if f == int(f) else str(f).replace('.', '_') + 'x'
+    """0.3 -> '0_3x', 0.75 -> '0_75x', 1.0 -> '1_0x', 1.5 -> '1_5x', 2.0 -> '2_0x'."""
+    s = f"{f:.10g}"  # trim trailing zeros
+    if '.' not in s:
+        s += '.0'
+    return s.replace('.', '_') + 'x'
 
 def load_vanilla_ore(name):
     path = os.path.join(VANILLA_SRC, name + '.json')
@@ -70,6 +72,18 @@ def load_vanilla_ore(name):
         print(f"ERROR: vanilla ore {path} not found — extract first from server jar", file=sys.stderr)
         sys.exit(1)
     return json.load(open(path))
+
+def ore_family(ore_name):
+    """'ore_diamond_buried' -> 'diamond'. 'ore_iron_upper' -> 'iron'."""
+    stem = ore_name.replace('ore_', '')
+    return stem.split('_')[0]
+
+def factor_for(ore_name, tier, bias):
+    overrides = bias.get('overrides', {}) or {}
+    fam = ore_family(ore_name)
+    if fam in overrides and tier in overrides[fam]:
+        return overrides[fam][tier]
+    return bias[tier]
 
 def main():
     cfg = json.load(open(CFG))
@@ -88,45 +102,44 @@ def main():
     os.makedirs(PF_DIR, exist_ok=True)
     os.makedirs(BM_DIR, exist_ok=True)
 
-    # Generate ore placed_features per non-1.0 tier
-    needed_factors = set()
+    # Generate placed_features for each (ore, factor) pair we actually need
+    needed = set()  # set of (ore, factor)
     for tier in ('easy', 'medium', 'hard'):
-        factor = bias[tier]
-        if abs(factor - 1.0) < 1e-6:
-            continue
-        needed_factors.add(factor)
-
-    for factor in needed_factors:
-        suffix = format_factor(factor)
         for ore in ores:
-            data = load_vanilla_ore(ore)
-            # Strip biome placement filter (breaks against tier biome substitution)
-            data['placement'] = [p for p in data['placement'] if p.get('type') != 'minecraft:biome']
-            count_idx = next((i for i, p in enumerate(data['placement'])
-                              if p.get('type') == 'minecraft:count' and isinstance(p.get('count'), int)), None)
-            if count_idx is None:
+            factor = factor_for(ore, tier, bias)
+            if abs(factor - 1.0) < 1e-6:
                 continue
-            orig = data['placement'][count_idx]['count']
-            data['placement'][count_idx]['count'] = max(1, round(orig * factor))
-            with open(os.path.join(PF_DIR, f"{ore}_{suffix}.json"), 'w') as f:
-                json.dump(data, f, indent=2)
+            needed.add((ore, factor))
 
-    # Generate ore biome modifiers per non-1.0 tier
-    for tier in ('easy', 'medium', 'hard'):
-        factor = bias[tier]
-        if abs(factor - 1.0) < 1e-6:
+    for ore, factor in needed:
+        data = load_vanilla_ore(ore)
+        data['placement'] = [p for p in data['placement'] if p.get('type') != 'minecraft:biome']
+        count_idx = next((i for i, p in enumerate(data['placement'])
+                          if p.get('type') == 'minecraft:count' and isinstance(p.get('count'), int)), None)
+        if count_idx is None:
             continue
+        orig = data['placement'][count_idx]['count']
+        data['placement'][count_idx]['count'] = max(1, round(orig * factor))
         suffix = format_factor(factor)
+        with open(os.path.join(PF_DIR, f"{ore}_{suffix}.json"), 'w') as f:
+            json.dump(data, f, indent=2)
+
+    # Generate ore biome modifiers per tier (only ores with non-1.0 factor for that tier)
+    for tier in ('easy', 'medium', 'hard'):
+        tier_ores = [(o, factor_for(o, tier, bias)) for o in ores]
+        scaled = [(o, f) for (o, f) in tier_ores if abs(f - 1.0) >= 1e-6]
+        if not scaled:
+            continue
         remove = {
             "type": "neoforge:remove_features",
             "biomes": f"#caero_rings:tier_{tier}",
-            "features": [f"minecraft:{o}" for o in ores],
+            "features": [f"minecraft:{o}" for (o, f) in scaled],
             "steps": "underground_ores",
         }
         add = {
             "type": "neoforge:add_features",
             "biomes": f"#caero_rings:tier_{tier}",
-            "features": [f"caero_rings:{o}_{suffix}" for o in ores],
+            "features": [f"caero_rings:{o}_{format_factor(f)}" for (o, f) in scaled],
             "step": "underground_ores",
         }
         json.dump(remove, open(os.path.join(BM_DIR, f"ore_{tier}_remove.json"), 'w'), indent=2)
@@ -152,9 +165,12 @@ def main():
         json.dump(mod, open(os.path.join(BM_DIR, f"boost_bic_{tier}.json"), 'w'), indent=2)
 
     # Report
-    pf_count = len(glob.glob(os.path.join(PF_DIR, '*.json')))
-    bm_count = len(glob.glob(os.path.join(BM_DIR, '*.json')))
-    print(f"  ore_bias: easy={bias['easy']} medium={bias['medium']} hard={bias['hard']}")
+    pf_count = len(glob.glob(os.path.join(PF_DIR, 'ore_*.json')))
+    bm_count = len([f for f in glob.glob(os.path.join(BM_DIR, '*.json'))
+                    if 'ore_' in os.path.basename(f) or 'boost_bic_' in os.path.basename(f)])
+    print(f"  ore_bias default: easy={bias['easy']} medium={bias['medium']} hard={bias['hard']}")
+    for fam, ov in (bias.get('overrides') or {}).items():
+        print(f"  ore_bias override [{fam}]: easy={ov.get('easy','-')} medium={ov.get('medium','-')} hard={ov.get('hard','-')}")
     print(f"  bic_spawn_boost: medium=+{bic['medium']}x hard=+{bic['hard']}x")
     print(f"  wrote {pf_count} placed_features, {bm_count} biome_modifiers")
 

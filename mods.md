@@ -23,6 +23,8 @@
 | ~~Continents~~ | ~~`1.1.13`~~ | ~~datapack~~ | ~~2026-03-29~~ | **Removed 2026-04-22 — conflicts with Tectonic on `noise_router/continents`; Tectonic picked.** |
 | **Distant Horizons** | `3.0.1-b-1.21.1` (beta) | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/distanthorizons) |
 | **Kotlin For Forge** | `5.11.0` | NeoForge | 2026-01-17 | [Modrinth](https://modrinth.com/mod/kotlin-for-forge) |
+| **World Border** (Serilum) | `1.21.1-4.8` | NeoForge | 2026-04-16 | [Modrinth](https://modrinth.com/mod/world-border) |
+| **Collective** (WB dep) | `1.21.1-8.20` | NeoForge | 2026-04-15 | [Modrinth](https://modrinth.com/mod/collective) |
 
 **Notes:**
 - Create Aeronautics is fresh (only two public releases: 1.0.2, 1.0.3). Both client and

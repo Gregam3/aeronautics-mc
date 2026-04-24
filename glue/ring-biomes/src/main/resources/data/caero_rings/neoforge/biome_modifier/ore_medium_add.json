@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#caero_rings:tier_medium",
+  "features": [
+    "caero_rings:ore_diamond_0_8x",
+    "caero_rings:ore_diamond_medium_0_8x",
+    "caero_rings:ore_diamond_buried_0_8x"
+  ],
+  "step": "underground_ores"
+}

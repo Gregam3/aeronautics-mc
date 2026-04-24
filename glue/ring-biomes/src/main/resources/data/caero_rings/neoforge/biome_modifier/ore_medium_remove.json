@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "#caero_rings:tier_medium",
+  "features": [
+    "minecraft:ore_diamond",
+    "minecraft:ore_diamond_medium",
+    "minecraft:ore_diamond_buried"
+  ],
+  "steps": "underground_ores"
+}
