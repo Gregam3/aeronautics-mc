@@ -3,15 +3,13 @@ package com.caero.rings
 import com.mojang.serialization.MapCodec
 import net.minecraft.core.registries.Registries
 import net.minecraft.world.level.biome.BiomeSource
+import net.neoforged.bus.api.EventPriority
 import net.neoforged.fml.common.Mod
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import net.neoforged.neoforge.registries.DeferredRegister
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
 import java.util.function.Supplier
 
-/**
- * Main entry point. Registers the Voronoi-tiered biome source codec with the
- * BIOME_SOURCE registry so dimension preset JSON can reference `caero_rings:voronoi_tiered`.
- */
 @Mod(CaeroRings.MOD_ID)
 object CaeroRings {
     const val MOD_ID = "caero_rings"
@@ -19,9 +17,6 @@ object CaeroRings {
     private val BIOME_SOURCES: DeferredRegister<MapCodec<out BiomeSource>> =
         DeferredRegister.create(Registries.BIOME_SOURCE, MOD_ID)
 
-    // Explicit Supplier SAM wrapper — Kotlin 2.3 otherwise can't disambiguate
-    // between DeferredRegister.register(String, Supplier) and
-    // DeferredRegister.register(String, Function<ResourceLocation, ...>).
     val VORONOI_TIERED = BIOME_SOURCES.register(
         "voronoi_tiered",
         Supplier<MapCodec<out BiomeSource>> { VoronoiTieredBiomeSource.CODEC },
@@ -29,5 +24,6 @@ object CaeroRings {
 
     init {
         BIOME_SOURCES.register(MOD_BUS)
+        MOD_BUS.addListener(EventPriority.LOWEST, java.util.function.Consumer<RegisterSpawnPlacementsEvent> { DaytimeSpawnOverride.onRegister(it) })
     }
 }

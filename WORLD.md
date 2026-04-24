@@ -1,10 +1,11 @@
 # World Rendering & Map Design
 
-**Version:** 0.2.0
-**Last updated:** 2026-04-23
-**Scope:** How the overworld looks at world-creation time — the interaction
-between Tectonic (terrain), Regions Unexplored + TerraBlender (biomes), and
-our Voronoi tier-swap biome source (`caero_rings`).
+**Version:** 0.4.0
+**Last updated:** 2026-04-24
+**Scope:** How the overworld looks and plays at world-creation time — terrain
+(Tectonic), biome distribution (Regions Unexplored + TerraBlender), Voronoi
+tier assignment (`caero_rings`), and tier-based hostile mob pressure (Born in
+Chaos + our spawn handlers).
 
 Per-layer plans:
 - Voronoi tiering — [`glue/ring-biomes/PLAN.md`](./glue/ring-biomes/PLAN.md)
@@ -12,121 +13,137 @@ Per-layer plans:
 
 ---
 
-## 1. Current mod stack (verified working 2026-04-23)
+## 1. Current mod stack (verified working 2026-04-24)
 
 | Layer | Mod | Version | What it decides |
 |---|---|---|---|
 | Terrain shape | **Tectonic** | 3.0.22 | Elevation, erosion, ridges, cliffs — dramatic mountains and canyons. No biome decisions. |
 | Biome injection | **Regions Unexplored** + **TerraBlender** | RU 0.5.9, TB 4.1.0.8 | 70+ new biomes injected into vanilla multi_noise via TerraBlender API. |
-| Tier re-skin | **`caero_rings` (Glue #5)** | 0.1.0 | Wraps multi_noise biome source. Swaps biomes to match Voronoi-assigned tier. |
+| Tier re-skin | **`caero_rings` (Glue #5)** | 0.1.0 | Wraps multi_noise biome source. Swaps biomes to match Voronoi-assigned tier. Spawns tier-appropriate hostile mobs near players. Prevents sun-burn on designated BiC undead. |
+| Hostile mobs | **Born in Chaos** | 1.7.5 | 40+ new hostile enemy mobs (zombies, skeletons, dread hounds, mother spider, etc.). Sun-proof undead + non-burning fauna means hard biomes can feel dangerous in daylight. |
 | Dependency | **Lithostitched** | 1.7.0 | Required by Tectonic for density function modifiers. |
 | Dependency | **Kotlin For Forge** | 5.11.0 | Required by caero_rings (Kotlin mod). |
+| Dependency | **GeckoLib** | 4.8.3 | Required by Born in Chaos for entity animations. |
 
 ### Why Regions Unexplored over Terralith
 
 Terralith 2.5.8 ships its own `noise_settings/overworld.json` and full
 `noise_router/` density functions, which override Tectonic's terrain
-amplification. Result: max height 89 (vanilla-scale) despite Tectonic being
-loaded. Multiple GitHub issues confirm this conflict (#90, #171, #376).
+amplification. Regions Unexplored uses TerraBlender, which injects biomes at
+runtime without overriding noise settings. Tectonic's terrain shaping applies
+cleanly.
 
-Regions Unexplored uses TerraBlender, which injects biomes at runtime without
-overriding any noise settings or density functions. Tectonic's terrain shaping
-applies cleanly. Verified: max height 128+ in headless testing with the new
-stack.
+### Why Born in Chaos
 
-Terralith 2.6.x has switched to TerraBlender but only targets MC 1.21.5+
-(NeoForge 26.1). Not available for our 1.21.1 target.
-
----
-
-## 2. How the layers compose
-
-```
-Tectonic:       Replaces density functions → dramatic terrain shape
-                (via Lithostitched wrap_density_function modifiers)
-                    ↓
-TerraBlender:   Injects RU biomes into vanilla multi_noise parameter space
-                (at runtime, no datapack overrides)
-                    ↓
-multi_noise:    Maps climate parameters → biome ID
-                    ↓
-caero_rings:    Wraps multi_noise. Checks Voronoi cell tier.
-                If biome tier ≠ cell tier → substitute with
-                temperature-matched biome from correct tier.
-                Oceans/rivers/caves pass through untouched.
-```
-
-Each layer operates at a different stage. They compose without conflict
-because:
-- Tectonic modifies WHERE land is and how tall (density functions)
-- TerraBlender modifies WHICH biomes exist (parameter space injection)
-- caero_rings modifies which biome WINS at each location (biome source wrapper)
+Alex's Mobs doesn't exist on 1.21.1. Cataclysm and Mowzie's Mobs are
+boss/structure-focused. Born in Chaos is primarily **common hostile enemies**
+(zombie/skeleton variants with twists, packs of spiders/hounds/flies) —
+dangerous wildlife and undead that matches the "outer ring feels hostile" goal
+without the RPG boss framing.
 
 ---
 
-## 3. Voronoi tier layout
+## 2. Voronoi tier zones
 
-From `glue/ring-biomes/src/main/resources/data/minecraft/dimension/overworld.json`:
+Biomes are sorted into three tag sets:
+- **Easy:** 36 biomes (gentle forests, plains, meadows, jungles) — tagged in `caero_rings:tier_easy`
+- **Medium:** 38 biomes (taigas, savannas, swamps, mountains, desert, fungal_fen) — `caero_rings:tier_medium`
+- **Hard:** 17 biomes (badlands, ice spikes, peaks, alien/extreme RU biomes) — `caero_rings:tier_hard`
+- **Untagged (pass-through):** oceans, rivers, beaches, caves — the Voronoi wrapper leaves these alone regardless of cell tier.
 
-```
-1 easy seed:    (0, 0)
-6 medium seeds: hexagonal ring at r=2400
-8 hard seeds:   rough ring at r≈4000 (hand-placed)
-medium_min_radius: 1500  (guaranteed easy core)
-hard_min_radius:   1500
-```
+Distance floors:
+- `medium_min = 1500`: medium and hard downgrade to easy inside 1500 blocks of origin.
+- `hard_min = 1500`: hard downgrades to medium between 1500 and `hardMin`, full hard beyond.
 
-### Tier biome counts (as of 2026-04-23)
-- **Easy:** 36 biomes (gentle forests, plains, meadows, jungles)
-- **Medium:** 37 biomes (taigas, savannas, swamps, mountains, deserts)
-- **Hard:** 18 biomes (badlands, ice spikes, peaks, alien/extreme RU biomes)
-- **Hard substitution pool:** 9 biomes (palette-based hardness only; terrain-dependent biomes like spires/cliffs excluded)
-- **Untagged (pass-through):** oceans, rivers, beaches, caves, deep dark
-
-### Substitution logic
-When a biome needs to be swapped to match its cell's tier:
-1. Gather candidates within ±0.5 temperature of the natural biome
-2. If pool is empty, use single closest-temperature candidate
-3. Deterministic `hashCell(x, z)` picks from pool for variety
-4. Hard tier uses `tier_hard_common` (not full `tier_hard`) to prevent
-   terrain-dependent biomes flooding the outer ring
+Confirmed at boot via log line:
+`caero_rings DIAG: medium_min=1500 hard_min=1500 seeds=15 easy_size=36 medium_size=38 hard_size=17 hard_sub_size=8`
 
 ---
 
-## 4. What's working (verified 2026-04-23)
+## 3. Tier-based mob pressure
 
-- [x] Tectonic terrain amplification (max height 128+ confirmed)
+Three mechanisms layer together. All target the same tier tags.
+
+### 3a. Natural spawn boosters (JSON biome modifiers)
+
+- `boost_bic_medium.json` — adds BiC mobs to `#caero_rings:tier_medium` at +0.5× default weights → **1.5× total** (stacked on BiC's own `neoforge:any` 1× base).
+- `boost_bic_hard.json` — adds BiC mobs to `#caero_rings:tier_hard` at +1.5× → **2.5× total**.
+
+Vanilla spawns (zombies, skeletons, creepers, spiders, etc.) are untouched —
+we use `add_spawns` only, never `remove_spawns`. Easy biomes keep vanilla +
+BiC default rates.
+
+### 3b. Daytime natural-spawn override (`DaytimeSpawnOverride.kt`)
+
+On `RegisterSpawnPlacementsEvent`, registers an `Operation.OR` predicate for
+23 non-burning BiC mob types. The predicate returns `true` in any
+`#caero_rings:tier_hard` biome, letting natural MONSTER-category spawning
+fire in broad daylight there. Elsewhere (easy/medium), BiC's original
+light-gated predicate applies.
+
+### 3c. Directed spawning (`TierSpawnHandler.kt`)
+
+`LevelTickEvent.Post` every 100 ticks, per online player:
+- If player is in `tier_hard`: pick weighted BiC mob from the HARD pool, spawn 24-64 blocks away. Day or night. Cap: 18 tier mobs within 48 blocks.
+- If player is in `tier_medium` at night: same flow with the MEDIUM pool. Cap: 10.
+- Easy biomes: untouched.
+
+Pools (`HARD_POOL` and `MEDIUM_POOL`) hard-coded in `TierSpawnHandler.kt`.
+Pack sizes per mob come from the pool entry.
+
+### 3d. Sun-burn prevention (`SunBurnPreventer.kt`)
+
+BiC undead extend `Monster` (not `Zombie`), so vanilla doesn't burn them.
+But MCreator-generated BiC tick procedures explicitly call
+`entity.igniteForSeconds(5.0f)` when `canSeeSky && isDay`. That's why they
+were burning despite extending `Monster`.
+
+Fix: on `EntityTickEvent.Post`, clear fire on 10 target BiC undead types
+(`decrepit_skeleton`, `decaying_zombie`, `baby_skeleton`, `skeleton_demoman`,
+`skeleton_thrasher`, `siamese_skeletons`, `zombie_bruiser`, `zombie_lumberjack`,
+`zombie_clown`, `bonescaller`). BiC ignites during `baseTick()`, we clear in
+`Post` same tick — entity data syncs to client at end of tick with fire=0, so
+clients never see them on fire. Skips the clear when the entity is in lava.
+
+---
+
+## 4. Summary by tier
+
+| Tier | Day | Night |
+|---|---|---|
+| **Easy** | Vanilla passive mobs. BiC default rates (1×, daytime-gated). | Vanilla + BiC hostiles at default rates. |
+| **Medium** | Vanilla passive mobs. BiC default at 1.5×, daytime-gated. | 1.5× BiC natural spawns + TierSpawnHandler medium pool. |
+| **Hard** | 2.5× BiC natural spawns (daylight-enabled for 23 types). TierSpawnHandler hard pool firing. Sun-proof undead persist. | 2.5× BiC + full natural + TierSpawnHandler. |
+
+Easy stays calm during the day, lightly hostile at night. Medium is a rest
+zone by day, active at night. Hard feels actively hostile at all times.
+
+---
+
+## 5. What's working (verified 2026-04-24)
+
+- [x] Tectonic terrain amplification
 - [x] Regions Unexplored biomes appearing in world
 - [x] Voronoi tier assignment (easy near spawn, medium/hard further out)
-- [x] Minimum radius floors (no medium inside 1500 blocks)
-- [x] Temperature-matched substitution with variety
 - [x] Biome label HUD (action bar: "Biome Name · Easy/Medium/Hard")
-- [x] Oceans/rivers pass through untouched
-- [x] Hard pool rebalanced (6 hot/dry, 2 cold, 1 neutral)
+- [x] `#caero_rings:tier_hard` tag resolves correctly at runtime (locate biome confirmed)
+- [x] BiC entity IDs resolve and summon successfully on the test server
+- [x] TierSpawnHandler logs each spawn attempt with tier/biome/result
+- [x] SunBurnPreventer clears fire on target undead every tick
 
 ---
 
-## 5. What's next
+## 6. What's next
 
-The world generation foundation is complete. Next steps are about making
-the tiers feel mechanically different — not just different biomes, but
-different gameplay rules:
-
-- [ ] **Mob difficulty scaling per tier.** Harder mobs / more spawns in
-      medium and hard rings. Could be vanilla gamerule tweaks, mob-modifier
-      mod, or a small glue mod that buffs mob attributes by tier.
-- [ ] **Loot scaling per tier.** Better loot tables in harder tiers.
-      Structures in hard ring drop rare materials.
-- [ ] **Resource distribution.** Certain ores or resources only available
-      in medium/hard tiers, incentivizing exploration beyond the easy ring.
-- [ ] **Glue Mod #1 (Numismatics → OPAC bridge)** still ships before
-      server provisioning. Ring biomes are a parallel workstream.
-- [ ] **Server provisioning** gated on glue mods being buildable and
-      passing gametests.
+- [ ] **Ore distribution bias per tier** (0.8× easy, 1.2× medium, 2× hard).
+- [ ] **Loot scaling per tier.** Structure loot tables in hard ring drop rare materials.
+- [ ] **Resource uniqueness.** Certain resources only available in medium/hard.
+- [ ] **Glue Mod #1 (Numismatics → OPAC bridge)** still ships before server provisioning.
+- [ ] **Server provisioning** gated on glue mods being buildable and passing gametests.
 
 ---
 
-## 6. Offline renderer
+## 7. Offline renderer
 
 ```
 cd glue/ring-biomes
@@ -134,24 +151,26 @@ python3 tools/render_map.py
 ```
 
 Outputs `renders/tier_voronoi.png` — Voronoi cell tier map at 1px=10 blocks.
-Validates seed placement and tier geometry without booting the game.
 
 ---
 
-## 7. Deploy to PrismLauncher
+## 8. Deploy to PrismLauncher
 
 ```
 cd glue/ring-biomes
-./gradlew build
-cp build/libs/caero_rings-0.1.0.jar \
-   ~/.local/share/PrismLauncher/instances/1.21.1/minecraft/mods/caero_rings.jar
+PRISM_INSTANCE=1.21.1 ./deploy.sh
 ```
 
-Required mods in Prism `mods/` folder:
+Required mods in Prism `mods/` folder (verified present):
 - `caero_rings.jar`
+- `born_in_chaos-1.7.5.jar`
 - `regions_unexplored-neoforge-1.21.1-0.5.9.jar`
 - `TerraBlender-neoforge-1.21.1-4.1.0.8.jar`
 - `tectonic-3.0.22-neoforge-21.1.jar`
 - `lithostitched-1.7.0-neoforge-21.1.jar`
 - `kotlinforforge-5.11.0-all.jar`
+- `geckolib-neoforge-1.21.1-4.8.3.jar`
 - `YungsApi-1.21.1-NeoForge-5.1.6.jar`
+
+No config file overrides — all tier logic lives in the `caero_rings` jar
+(biome modifier JSONs + Kotlin event handlers).

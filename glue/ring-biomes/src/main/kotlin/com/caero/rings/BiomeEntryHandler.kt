@@ -112,14 +112,15 @@ object BiomeEntryHandler {
         return Component.literal(label).withStyle(colour)
     }
 
+    private const val OCEAN_MEDIUM_BOUNDARY = 1600L
+    private const val OCEAN_HARD_BOUNDARY = 3200L
+
     private fun distanceTier(player: ServerPlayer): Pair<String, ChatFormatting> {
         val x = player.blockX.toLong()
         val z = player.blockZ.toLong()
         val distSq = x * x + z * z
-        val medSq = VoronoiTieredBiomeSource.DEFAULT_MEDIUM_MIN_RADIUS.toLong() *
-                VoronoiTieredBiomeSource.DEFAULT_MEDIUM_MIN_RADIUS
-        val hardSq = VoronoiTieredBiomeSource.DEFAULT_HARD_MIN_RADIUS.toLong() *
-                VoronoiTieredBiomeSource.DEFAULT_HARD_MIN_RADIUS
+        val medSq = OCEAN_MEDIUM_BOUNDARY * OCEAN_MEDIUM_BOUNDARY
+        val hardSq = OCEAN_HARD_BOUNDARY * OCEAN_HARD_BOUNDARY
         return when {
             distSq < medSq -> "Easy" to ChatFormatting.GREEN
             distSq < hardSq -> "Medium" to ChatFormatting.GOLD

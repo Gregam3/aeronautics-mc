@@ -12,6 +12,33 @@ round-trips:
 - Clone upstream mod repos into `.research/repos/` to grep APIs directly rather
   than relying on web-fetched docs.
 
+## Verify the target mod is actually installed — FIRST, ALWAYS
+
+**Before writing a single line of config, JSON, or Kotlin that references another
+mod's entity/block/item IDs, verify that mod is in the running PrismLauncher
+instance's `mods/` folder.** Not the plan, not `mods.md`, not what was discussed
+last session — the *actual* `ls` of:
+
+```
+~/.local/share/PrismLauncher/instances/1.21.1/minecraft/mods/
+```
+
+`mods.md` documents intent; the instance folder documents reality. They drift.
+Working against the plan instead of reality wastes entire sessions — biome
+modifiers referencing entity IDs that don't exist silently do nothing, and
+`BuiltInRegistries.ENTITY_TYPE.containsKey` guards swallow the failure invisibly.
+There is no compile-time error, no runtime error, just spawns that never happen.
+
+If the mod isn't installed:
+1. Stop. Do not build config for it.
+2. Tell Greg what's missing and ask: install it, or pivot to something that is
+   installed?
+3. Only after confirmation: install the jar (it's probably in `.research/` or
+   can be fetched from Modrinth) and proceed.
+
+This rule supersedes "default to maximum autonomy" — installing a new mod into
+the instance is a state change Greg should sign off on.
+
 ## Self-testing (before declaring a task done)
 
 The project is a modded Minecraft server. Verify as much as possible without
