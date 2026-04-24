@@ -149,7 +149,8 @@ Players cannot create their own portals. Admins place a small number (target
 **~8** for 10k×10k / 10 players) by hand at interesting surface locations.
 
 - Blocker: `PlayerPortalBlocker.kt` cancels `BlockEvent.PortalSpawnEvent` for any ignition attempt (includes zombified piglin-lit portals).
-- Admin placement: `/caero_placeportal` (permission level 2) builds a 4×5 obsidian frame + lit portal blocks at the player's position, oriented perpendicular to their facing direction. Use in creative/spectator mode.
+- Admin placement: `/caero_placeportal` (op level 2) builds a **7×13** obsidian frame + lit portal at the player's position (centered on the issuer, bottom edge at foot level), oriented perpendicular to their facing. The WoW Dark Portal scale — imposing but not absurd.
+- Custom size: `/caero_placeportal <width> <height>` accepts 4–23 for both dimensions.
 - Existing portals always remain functional — only the ignition event is blocked. `/setblock` and `/fill` also bypass the event for manual builds.
 
 ---
