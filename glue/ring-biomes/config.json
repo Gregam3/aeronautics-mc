@@ -1,0 +1,35 @@
+{
+  "_comment": "Master config for caero_rings. Edit values here, run ./scripts/apply-config.sh, then build+deploy.",
+  "ore_bias": {
+    "_comment": "Multiplier applied to vanilla ore placed_feature count values per tier. 1.0 = vanilla, 0.5 = half, 2.0 = double. Set to 1.0 to skip tier (no biome modifier generated).",
+    "easy": 0.75,
+    "medium": 1.0,
+    "hard": 1.5
+  },
+  "ore_list": {
+    "_comment": "Vanilla overworld ore placed_features that get rescaled. Each gets a scaled variant per non-1.0 tier.",
+    "ores": [
+      "ore_coal_upper", "ore_coal_lower",
+      "ore_iron_small", "ore_iron_middle", "ore_iron_upper",
+      "ore_copper", "ore_copper_large",
+      "ore_gold", "ore_gold_extra",
+      "ore_redstone", "ore_redstone_lower",
+      "ore_lapis", "ore_lapis_buried",
+      "ore_diamond", "ore_diamond_medium", "ore_diamond_buried",
+      "ore_emerald"
+    ]
+  },
+  "bic_spawn_boost": {
+    "_comment": "ADDITIVE multiplier on top of BiC's default 1x neoforge:any spawns. medium=0.5 means +0.5x = 1.5x total. Values apply to weight, not count.",
+    "medium": 0.5,
+    "hard": 1.5
+  },
+  "tier_spawn_handler": {
+    "_comment": "Runtime directed BiC spawning near players (TierSpawnHandler.kt). NOT auto-synced from this config yet — edit the Kotlin file directly.",
+    "tick_interval": 100,
+    "spawn_radius_min": 24,
+    "spawn_radius_max": 64,
+    "hard_cap_nearby": 18,
+    "medium_cap_nearby": 10
+  }
+}

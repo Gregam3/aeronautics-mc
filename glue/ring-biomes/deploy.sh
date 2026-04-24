@@ -20,6 +20,9 @@ MOD_DIR="$HOME/.local/share/PrismLauncher/instances/$PRISM_INSTANCE/minecraft/mo
 BUILD_JAR="build/libs/${MOD_ID}-${MOD_VERSION}.jar"
 TARGET_JAR="$MOD_DIR/${MOD_ID}.jar"
 
+echo "⚙️  Applying config.json..."
+python3 scripts/apply-config.py
+
 echo "🔨 Building ${MOD_ID} ${MOD_VERSION}..."
 ./gradlew build
 
