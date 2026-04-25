@@ -132,6 +132,17 @@ world feel genuinely big, so flying somewhere *means* something.
   `plans/chest-weight.md`. (First mixin in caero_rings; required adding `[[mixins]]`
   to `neoforge.mods.toml`, a `caero_rings.mixins.json`, and `compileOnly` deps on
   the sable+encumbered jars in `glue/ring-biomes/libs/`.)
+- **2026-04-25** — **Xaero's minimap + world map gated on holding a filled
+  map; entity radar disabled.** Set `minimap_item = minecraft:filled_map`
+  (minimap) and `map_item = minecraft:filled_map` (world map) plus
+  `display_radar = false` and `tracked_players_*=false` in both client
+  default and server-enforced profiles. Without a filled map in inventory
+  the minimap doesn't render and M key doesn't open. No mob/item/player
+  dots in either UI regardless. Replaces the planned Glue Mod #3
+  (Navigator's Log) for v1 — Xaero's built-in gate covers the same intent
+  without a custom mod. Snippet + verify steps in
+  `configs/xaero-minimap-and-world-map.md`. Pillar trace: heuristic #2
+  (transport cost) + #1 (cartographers have a real product).
 - **2026-04-25** — **OPAC `maxPlayerClaims = 1` baseline + `/caero_addplayerclaim`
   glue command.** Default per-player claim cap dropped from OPAC's stock 500 to
   1 in `<instance>/config/openpartiesandclaims-server.toml`. Players must spend
@@ -318,12 +329,13 @@ Likely custom work (order of probability):
    container-tick handler + 1 command call.
 4. **Glue mod #2: Distance capability ladder** — single `FinalizeSpawnEvent` handler
    + 1 JSON config for per-tier attribute/effect/equipment packages. See §4b.
-5. **Glue mod #3: Navigator's Log item** (confirmed 2026-04-20) — register one
-   craftable item; when a player has it in inventory, Xaero's Minimap is enabled for
-   them; when they don't, it's disabled. Likely implementation: server-side
-   permission toggle via Xaero's server config protocol, or a mixin that intercepts
-   Xaero's network packets per-player. Recipe TBD (should require outer-biome mats
-   so you can't craft it at spawn).
+5. ~~**Glue mod #3: Navigator's Log item**~~ — **superseded 2026-04-25.** Xaero's
+   own `minimap_item` / `map_item` config gates both UIs on holding a
+   `minecraft:filled_map`, with no glue code. See
+   `configs/xaero-minimap-and-world-map.md`. If we later want a custom craftable
+   gate-item (with outer-biome-mat recipe), just change the four config values
+   to a custom item ID — still no glue mod needed unless we want behaviour
+   Xaero's config can't express.
 6. **Glue mod #4: No-Player-Portals** (confirmed 2026-04-20) — single listener on
    `BlockEvent.PortalSpawnEvent`; cancel when the formation is player-initiated.
    Existing portal blocks (admin-built) still function. Single-purpose; if more
