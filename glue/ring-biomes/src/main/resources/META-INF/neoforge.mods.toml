@@ -49,5 +49,12 @@ flow through unchanged.
     ordering="BEFORE"
     side="BOTH"
 
+[[dependencies.${mod_id}]]
+    modId="openpartiesandclaims"
+    type="optional"
+    versionRange="[0.26.0,)"
+    ordering="BEFORE"
+    side="BOTH"
+
 [[mixins]]
     config="caero_rings.mixins.json"
