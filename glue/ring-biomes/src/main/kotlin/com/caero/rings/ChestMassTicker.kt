@@ -96,25 +96,33 @@ object ChestMassTicker {
 
     private fun collectBonuses(sl: ServerSubLevel, level: ServerLevel): Map<Long, Double> {
         val bbox = sl.plot.boundingBox
-        val pos = BlockPos.MutableBlockPos()
         val out = HashMap<Long, Double>()
-        var x = bbox.minX()
-        while (x <= bbox.maxX()) {
-            var y = bbox.minY()
-            while (y <= bbox.maxY()) {
-                var z = bbox.minZ()
-                while (z <= bbox.maxZ()) {
-                    pos.set(x, y, z)
-                    val be = level.getBlockEntity(pos)
-                    if (be != null) {
+        // Iterate by loaded chunk and read each chunk's pre-built BE map.
+        // O(chunks × BEs_per_chunk) instead of O(bbox volume) — for a plot
+        // bbox that spans multiple chunks but holds few containers, this is
+        // ~1000x faster than walking every position. getChunkNow returns
+        // null for unloaded chunks; sable keeps active-contraption chunks
+        // loaded via tickets, so unloaded == not-our-problem.
+        val chunkSource = level.chunkSource
+        val minCx = bbox.minX() shr 4
+        val maxCx = bbox.maxX() shr 4
+        val minCz = bbox.minZ() shr 4
+        val maxCz = bbox.maxZ() shr 4
+        var cx = minCx
+        while (cx <= maxCx) {
+            var cz = minCz
+            while (cz <= maxCz) {
+                val chunk = chunkSource.getChunkNow(cx, cz)
+                if (chunk != null) {
+                    for ((pos, be) in chunk.blockEntities) {
+                        if (!bbox.contains(pos.x, pos.y, pos.z)) continue
                         val bonus = ChestMass.bonusFor(be)
                         if (bonus > 0.0) out[pos.asLong()] = bonus
                     }
-                    z++
                 }
-                y++
+                cz++
             }
-            x++
+            cx++
         }
         return out
     }
