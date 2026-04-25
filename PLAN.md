@@ -120,6 +120,18 @@ world feel genuinely big, so flying somewhere *means* something.
 - **2026-04-20** — **Glue mods implemented in Kotlin.** Kotlin For Forge 5.11.0
   added as a runtime dependency. Per-mod loader declared as `kotlinforforge` in
   `neoforge.mods.toml`. No Java code in our glue mods.
+- **2026-04-25** — **Chest-contents weight implemented in `caero_rings`.** Java
+  Mixin into `dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyHelper#getMass`
+  adds extra mass per item in any `Container` BE on a contraption. Per-item value
+  is `0.1 × stack.count × EncumberedDataMaps.getWeight(item)` — sable's baseline
+  block mass is 1.0, so 0.1 = "10% of a real block" per item, exactly as
+  specified. Reuses Encumbered's data map so player-encumbrance and airship-mass
+  stay calibrated together. Cap of 200 mass per container limits worst-case
+  shulker-of-dense-items. Supports pillar #2 (Economy with teeth: cargo weight
+  matters for vehicle choice) without undermining any pillar. Plan + status:
+  `plans/chest-weight.md`. (First mixin in caero_rings; required adding `[[mixins]]`
+  to `neoforge.mods.toml`, a `caero_rings.mixins.json`, and `compileOnly` deps on
+  the sable+encumbered jars in `glue/ring-biomes/libs/`.)
 
 The **formal mod list with versions and sources** lives in
 [`mods.md`](./mods.md) and is the authoritative reference; update both files when

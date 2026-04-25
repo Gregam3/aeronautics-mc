@@ -1,7 +1,43 @@
 # Chest-contents weight for airship physics
 
-**Status:** design only, not implemented.
+**Status:** implemented in `caero_rings` (2026-04-25). Builds clean; runtime verification on the live instance still pending.
 **Goal:** make chests on a Create Aeronautics airship contribute extra physics mass proportional to the items stored inside, so loaded cargo ships behave heavier than empty ones.
+
+## Calibration (locked 2026-04-25)
+
+Per-stack mass bonus = `0.1 × stack.count × EncumberedDataMaps.getWeight(item)`.
+
+Sable's baseline solid-block mass is **1.0** (from `data/sable/physics_block_properties/heavy.json` etc. — `heavy` = 2.0, `light` = 0.5, the default block is 1.0). So a per-item value of **0.1 = 10% of a real block**, exactly as specified. A full stack of vanilla weight-1.0 items adds 6.4 mass (≈6 blocks worth); a fully-stacked double chest of stone-weight items adds ~345 mass before the cap. We piggyback on Encumbered's per-item weight data map rather than maintaining a duplicate config — items already calibrated for the player-encumbrance system stay consistent for airship cargo.
+
+`MAX_BONUS_PER_BLOCK = 200.0` caps a single container at ~200 blocks-equivalent of mass (e.g., a fully stacked shulker box of dense items would otherwise dominate). Adjust if playtesting shows it's wrong.
+
+## Live recalculation (added 2026-04-25)
+
+Sable computes `MassTracker` once at contraption assembly (or on world reload) and caches it on `ServerSubLevel`. Inventory changes alone do not trigger a rebuild.
+
+**First attempt** (rejected): periodic `ServerSubLevel.buildMassTracker()` + `PhysicsPipeline.onStatsChanged()` — destabilized Rapier on every fire. Contraptions exploded instantly. The full rebuild *replaces* the cached `MergedMassTracker` and pushes fresh mass/inertia/CoM into a moving rigid body, which Rapier doesn't tolerate.
+
+**Working approach: scripted per-block delta via sable's own safe path.**
+
+`SubLevelPhysicsSystem.updateMassDataFromBlockChange(sl, pos, oldState, newState, true)` is the public method sable uses internally for block placement/breaking. It mutates the existing tracker (doesn't replace it), via `addBlockMass(+newMass)` then `addBlockMass(-oldMass)`, then calls `updateMergedMassData` and `onStatsChanged` — the exact path Rapier accepts.
+
+To use it for inventory changes (where the block state didn't actually change), `ScriptedMassDelta` sets a `ThreadLocal` override before the call. Inside `PhysicsBlockPropertyHelperMixin#getMass`, when the override is set, the first `getMass` call returns `chest_base + oldBonus`, the second returns `chest_base + newBonus`. Sable computes `delta = newBonus - oldBonus` and applies it cleanly. No tracker replacement, no Rapier destabilization.
+
+`ChestMassTicker` (`@EventBusSubscriber LevelTickEvent.Post`) wakes every 40 ticks (2s):
+- For each active `ServerSubLevel`, walks the bounding box via `level.getBlockEntity(pos)` (the same path `LevelAccelerator` uses, so the chest BEs are visible).
+- Sums the per-position bonus and compares to the per-position cache.
+- For positions where bonus changed, calls `applyDelta` → scripted `updateMassDataFromBlockChange`.
+- First sighting of a sublevel is treated as baseline (record bonuses, no delta applied) — avoids double-counting the assembly-time bonus.
+
+**Verified 2026-04-25 in playtest** (balloon at hover equilibrium):
+- +1 cobble → bonus 0→0.1, tracker mass 6.0→6.1.
+- +6 cobble → bonus 0.1→0.7, tracker mass 6.1→6.7.
+- emptied → bonus 0.7→0.0, tracker mass 6.7→6.0.
+- +1 stack → bonus 0→6.2, tracker mass 6.0→12.2.
+
+Contraption stayed intact through every change; balloon visibly rose/sank in response. ~2s lag perceived between cargo edit and physics response (the tick interval).
+
+Cost per tick is bounded by the number of active contraptions × bbox volume (one `getBlockEntity` lookup per cell, most return null — fast path). Negligible for typical sized airships.
 
 ## Finding (from 2026-04-24 investigation)
 
@@ -41,15 +77,12 @@ abstract class PhysicsBlockPropertyHelperMixin {
 - `item_weight` comes from a config map (default: 1.0 per stack, with overrides for heavy/light items).
 - Reuse Encumbered mod's per-item weight values for consistency if practical (check its data-driven config format).
 
-## Implementation steps
+## Implementation (as shipped)
 
-1. **Mixin scaffolding for caero_rings** (first-time cost).
-   - Add `mixins.json` under `src/main/resources/`.
-   - Register in `neoforge.mods.toml` under `[[mixins]]`.
-   - Verify KFF (Kotlin for Forge) plays nicely with mixins — should; pattern is established. Alternatively, write the mixin in Java alongside the Kotlin — mixins are low-ceremony Java classes.
-2. **ChestWeightConfig** — Kotlin object with a `Map<Item, Double>` loaded from `glue/ring-biomes/config.json` → new `chest_weight` block: `{"default": 1.0, "overrides": {"minecraft:obsidian": 10.0, ...}}`. Wire into `scripts/apply-config.py` so deploys regenerate.
-3. **The mixin itself** — ~30 lines counting imports.
-4. **Integration tests** — GameTest (`runGameTestServer`) that assembles a known test contraption with and without chests containing items, asserts the `ServerLevelPlot.getSelfMassTracker().getMass()` differs appropriately.
+1. **Mixin scaffolding** — `src/main/resources/caero_rings.mixins.json` with `compatibilityLevel: JAVA_21`, refmap unused (sable classes are unobfuscated). Registered via `[[mixins]] config="caero_rings.mixins.json"` in `neoforge.mods.toml`. Mixin written in Java (`src/main/java/com/caero/rings/mixin/PhysicsBlockPropertyHelperMixin.java`) — Kotlin for the calculator only. `remap = false` on the mixin annotation since we target a non-vanilla class.
+2. **ChestMass calculator** — `src/main/kotlin/com/caero/rings/ChestMass.kt`. Single `@JvmStatic fun bonusFor(BlockEntity?): Double`. No bespoke config — pulls weights from `EncumberedDataMaps.getWeight(stack.itemHolder)` so the existing player-encumbrance numbers drive airship cargo too. Two constants: `MASS_PER_WEIGHT_UNIT = 0.1`, `MAX_BONUS_PER_BLOCK = 200.0`. Iterates `Container.containerSize` / `getItem(i)`; short-circuits at the cap.
+3. **Compile-time deps** — `compileOnly files("libs/sable-neoforge-1.21.1-1.1.3.jar")` and `compileOnly files("libs/encumbered-1.21.1-1.0.0.jar")` in `glue/ring-biomes/build.gradle`. Hard runtime dep on both via `[[dependencies.caero_rings]]` blocks (`type="required"`, `ordering="BEFORE"`) so KFF/Mixin transformer fires after sable is loaded.
+4. **Pending: GameTest** — would assemble a contraption with and without a stocked chest and assert the delta in `ServerLevelPlot.getSelfMassTracker().getMass()`. Not yet written.
 
 ## Reliability assessment — 80% confident it'll work and stay working.
 

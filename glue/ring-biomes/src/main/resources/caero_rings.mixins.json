@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.caero.rings.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "PhysicsBlockPropertyHelperMixin"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
