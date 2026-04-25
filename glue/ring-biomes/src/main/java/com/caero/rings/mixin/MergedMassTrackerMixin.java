@@ -51,9 +51,14 @@ public abstract class MergedMassTrackerMixin {
         double delta = chestAdjust + playerAdjust;
         if (delta == 0.0) return;
 
-        this.mass += delta;
-        if (this.mass > 0.0) {
-            this.inverseMass = 1.0 / this.mass;
-        }
+        // Safety: never let our adjustment cross zero. isInvalid() returns true
+        // when mass <= 0, which triggers destroyAllBlocks() in
+        // SubLevelContainer.processSubLevelRemovals — we'd disassemble the ship
+        // mid-water on a bad config or extreme cargo.
+        double newMass = this.mass + delta;
+        if (newMass <= 0.0) return;
+
+        this.mass = newMass;
+        this.inverseMass = 1.0 / newMass;
     }
 }

@@ -24,6 +24,8 @@ object WaterDiscount {
 
     private val scratch = BlockPos.MutableBlockPos()
 
+    private const val SAMPLES_BELOW: Int = 6
+
     /** Returns the multiplier applied to weight bonuses for this sub-level. 1.0 = no discount, 0.3 = 70% off. */
     @JvmStatic
     fun multiplierFor(sl: ServerSubLevel): Double {
@@ -31,9 +33,22 @@ object WaterDiscount {
         if (!cfg.enabled || cfg.discount <= 0.0) return 1.0
         val pose = sl.lastNetworkedPose() ?: return 1.0
         val pos = pose.position()
-        scratch.set(Math.floor(pos.x()).toInt(), Math.floor(pos.y()).toInt() - 1, Math.floor(pos.z()).toInt())
-        val inWater = sl.level.getFluidState(scratch).`is`(FluidTags.WATER)
-        return if (inWater) (1.0 - cfg.discount).coerceAtLeast(0.0) else 1.0
+        val xi = Math.floor(pos.x()).toInt()
+        val zi = Math.floor(pos.z()).toInt()
+        val y0 = Math.floor(pos.y()).toInt()
+        val level = sl.level
+        // Sample a small column under the contraption's pose center. Any water hit
+        // counts — handles tall ships where the CoM is mid-hull and the block
+        // immediately below pose.y is hull material, not water.
+        var i = 1
+        while (i <= SAMPLES_BELOW) {
+            scratch.set(xi, y0 - i, zi)
+            if (level.getFluidState(scratch).`is`(FluidTags.WATER)) {
+                return (1.0 - cfg.discount).coerceAtLeast(0.0)
+            }
+            i++
+        }
+        return 1.0
     }
 
     private fun loadConfig(): Config {
@@ -44,7 +59,7 @@ object WaterDiscount {
                 val obj = JsonParser.parseReader(reader).asJsonObject
                 Config(
                     enabled = obj["enabled"]?.asBoolean ?: DEFAULT.enabled,
-                    discount = obj["discount"]?.asDouble ?: DEFAULT.discount,
+                    discount = (obj["discount"]?.asDouble ?: DEFAULT.discount).coerceIn(0.0, 1.0),
                 )
             }
         } catch (e: Exception) {
