@@ -1,0 +1,1386 @@
+{
+  "_comment": "caero_rings overrides for Encumbered's per-item weights. Encumbered ships every item at 1.0 as a stub; these entries override the high-traffic cargo items so weight actually scales with material density. Calibration: heavy stone-tier = 2.0 (1 stack = 128, well over the overencumbered threshold of 100), iron-tier = 3.0, storage blocks = 6.0, anvil = 10.0, light/bulk items like coins / food / fibers below 1.0 so currency and rations don't punish travelers. replace=true on each entry so our value wins over Encumbered's bundled 1.0.",
+  "replace": false,
+  "values": {
+    "minecraft:cobblestone": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:stone": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:granite": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:diorite": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:andesite": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:tuff": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:deepslate": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:cobbled_deepslate": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:blackstone": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:basalt": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:obsidian": {
+      "replace": true,
+      "value": {
+        "weight": 5.0
+      }
+    },
+    "minecraft:crying_obsidian": {
+      "replace": true,
+      "value": {
+        "weight": 5.0
+      }
+    },
+    "minecraft:netherrack": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "minecraft:end_stone": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:sandstone": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "minecraft:dirt": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:grass_block": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:sand": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:gravel": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:clay": {
+      "replace": true,
+      "value": {
+        "weight": 0.7
+      }
+    },
+    "minecraft:mud": {
+      "replace": true,
+      "value": {
+        "weight": 0.7
+      }
+    },
+    "minecraft:oak_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:spruce_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:birch_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:jungle_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:acacia_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:dark_oak_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:mangrove_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:cherry_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "minecraft:oak_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:spruce_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:birch_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:jungle_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:acacia_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:dark_oak_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:mangrove_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:cherry_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:bamboo": {
+      "replace": true,
+      "value": {
+        "weight": 0.1
+      }
+    },
+    "minecraft:bamboo_block": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:stick": {
+      "replace": true,
+      "value": {
+        "weight": 0.05
+      }
+    },
+    "minecraft:raw_iron": {
+      "replace": true,
+      "value": {
+        "weight": 4.0
+      }
+    },
+    "minecraft:raw_copper": {
+      "replace": true,
+      "value": {
+        "weight": 3.5
+      }
+    },
+    "minecraft:raw_gold": {
+      "replace": true,
+      "value": {
+        "weight": 5.0
+      }
+    },
+    "minecraft:iron_ingot": {
+      "replace": true,
+      "value": {
+        "weight": 3.0
+      }
+    },
+    "minecraft:copper_ingot": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:gold_ingot": {
+      "replace": true,
+      "value": {
+        "weight": 4.0
+      }
+    },
+    "minecraft:netherite_ingot": {
+      "replace": true,
+      "value": {
+        "weight": 6.0
+      }
+    },
+    "minecraft:netherite_scrap": {
+      "replace": true,
+      "value": {
+        "weight": 5.0
+      }
+    },
+    "minecraft:iron_block": {
+      "replace": true,
+      "value": {
+        "weight": 6.0
+      }
+    },
+    "minecraft:copper_block": {
+      "replace": true,
+      "value": {
+        "weight": 5.5
+      }
+    },
+    "minecraft:gold_block": {
+      "replace": true,
+      "value": {
+        "weight": 7.0
+      }
+    },
+    "minecraft:diamond_block": {
+      "replace": true,
+      "value": {
+        "weight": 7.0
+      }
+    },
+    "minecraft:emerald_block": {
+      "replace": true,
+      "value": {
+        "weight": 6.5
+      }
+    },
+    "minecraft:netherite_block": {
+      "replace": true,
+      "value": {
+        "weight": 10.0
+      }
+    },
+    "minecraft:diamond": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:emerald": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:coal": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:charcoal": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:redstone": {
+      "replace": true,
+      "value": {
+        "weight": 0.1
+      }
+    },
+    "minecraft:lapis_lazuli": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:quartz": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:amethyst_shard": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:anvil": {
+      "replace": true,
+      "value": {
+        "weight": 10.0
+      }
+    },
+    "minecraft:chipped_anvil": {
+      "replace": true,
+      "value": {
+        "weight": 9.0
+      }
+    },
+    "minecraft:damaged_anvil": {
+      "replace": true,
+      "value": {
+        "weight": 8.0
+      }
+    },
+    "minecraft:heavy_core": {
+      "replace": true,
+      "value": {
+        "weight": 8.0
+      }
+    },
+    "minecraft:feather": {
+      "replace": true,
+      "value": {
+        "weight": 0.05
+      }
+    },
+    "minecraft:string": {
+      "replace": true,
+      "value": {
+        "weight": 0.1
+      }
+    },
+    "minecraft:paper": {
+      "replace": true,
+      "value": {
+        "weight": 0.05
+      }
+    },
+    "minecraft:book": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:leather": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:wool": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:wheat": {
+      "replace": true,
+      "value": {
+        "weight": 0.1
+      }
+    },
+    "minecraft:wheat_seeds": {
+      "replace": true,
+      "value": {
+        "weight": 0.02
+      }
+    },
+    "minecraft:bread": {
+      "replace": true,
+      "value": {
+        "weight": 0.2
+      }
+    },
+    "minecraft:apple": {
+      "replace": true,
+      "value": {
+        "weight": 0.2
+      }
+    },
+    "minecraft:cooked_beef": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:cooked_porkchop": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "minecraft:cooked_chicken": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:carrot": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "minecraft:potato": {
+      "replace": true,
+      "value": {
+        "weight": 0.2
+      }
+    },
+    "minecraft:beetroot": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "minecraft:pumpkin": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "minecraft:melon": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "minecraft:cake": {
+      "replace": true,
+      "value": {
+        "weight": 1.0
+      }
+    },
+    "minecraft:water_bucket": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:lava_bucket": {
+      "replace": true,
+      "value": {
+        "weight": 2.5
+      }
+    },
+    "minecraft:milk_bucket": {
+      "replace": true,
+      "value": {
+        "weight": 2.0
+      }
+    },
+    "minecraft:bucket": {
+      "replace": true,
+      "value": {
+        "weight": 0.5
+      }
+    },
+    "minecraft:potion": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "minecraft:glass_bottle": {
+      "replace": true,
+      "value": {
+        "weight": 0.2
+      }
+    },
+    "minecraft:arrow": {
+      "replace": true,
+      "value": {
+        "weight": 0.05
+      }
+    },
+    "minecraft:tipped_arrow": {
+      "replace": true,
+      "value": {
+        "weight": 0.06
+      }
+    },
+    "minecraft:spectral_arrow": {
+      "replace": true,
+      "value": {
+        "weight": 0.06
+      }
+    },
+    "numismatics:spur": {
+      "replace": true,
+      "value": {
+        "weight": 0.02
+      }
+    },
+    "numismatics:bevel": {
+      "replace": true,
+      "value": {
+        "weight": 0.04
+      }
+    },
+    "numismatics:sun": {
+      "replace": true,
+      "value": {
+        "weight": 0.06
+      }
+    },
+    "numismatics:cog": {
+      "replace": true,
+      "value": {
+        "weight": 0.08
+      }
+    },
+    "numismatics:sprocket": {
+      "replace": true,
+      "value": {
+        "weight": 0.1
+      }
+    },
+    "numismatics:crown": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "numismatics:coin": {
+      "replace": true,
+      "value": {
+        "weight": 0.05
+      }
+    },
+    "regions_unexplored:alpha_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:baobab_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:black_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:blackwood_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:blue_bioshroom_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:blue_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:brimwood_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:brown_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:cobalt_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:cyan_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:cypress_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:dead_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:eucalyptus_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:gray_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:green_bioshroom_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:green_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:joshua_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:kapok_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:larch_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:light_blue_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:light_gray_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:lime_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:magenta_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:magnolia_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:maple_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:mauve_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:orange_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:palm_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:pine_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:pink_bioshroom_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:pink_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:purple_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:red_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:redwood_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:socotra_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:white_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:willow_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:yellow_bioshroom_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:yellow_painted_planks": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "regions_unexplored:acacia_branch_from_acacia_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:baobab_branch_from_baobab_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:birch_branch_from_birch_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:blackwood_branch_from_blackwood_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:cherry_branch_from_cherry_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:cypress_branch_from_cypress_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:dark_oak_branch_from_dark_oak_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:dead_branch_from_dead_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:eucalyptus_branch_from_eucalyptus_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:joshua_beard_from_joshua_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:jungle_branch_from_jungle_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:kapok_branch_from_kapok_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:larch_branch_from_larch_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:magnolia_branch_from_magnolia_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:mangrove_branch_from_mangrove_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:maple_branch_from_maple_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:mauve_branch_from_mauve_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:oak_branch_from_oak_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:palm_beard_from_palm_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:pine_branch_from_pine_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:redwood_branch_from_redwood_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:silver_birch_branch_from_silver_birch_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:socotra_branch_from_socotra_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:spruce_branch_from_spruce_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "regions_unexplored:willow_branch_from_willow_log": {
+      "replace": true,
+      "value": {
+        "weight": 0.8
+      }
+    },
+    "hybrid-aquatic:anglerfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:barreleye": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:betta": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:blowfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:blue_spotted_stingray": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:boxfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:carp": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:clownfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:coconut_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:coelacanth": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:cuttlebone": {
+      "replace": true,
+      "value": {
+        "weight": 0.4
+      }
+    },
+    "hybrid-aquatic:damselfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:danio": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:discus": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:dragonfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:dungeness_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:fiddler_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:flashlight_fish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:flower_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:flying_fish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:ghost_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:glowslime": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:golden_dorado": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:goldfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:gourami": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:herring": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:john_dory": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:karkinos_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:lightfoot_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:lionfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:lobster_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:mackerel": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:mahi": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:moray_eel": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:needlefish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:oarfish": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "hybrid-aquatic:opah": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:oscar": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:parrotfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:pearlfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:piranha": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:ratfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:raw_crab": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:raw_crayfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:raw_lobster_tail": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:raw_shrimp": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:raw_tentacle": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:rockfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:sea_bass": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:seahorse": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:sea_urchin_spine": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:sheepshead_wrasse": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:snailfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:spider_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:squirrelfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:stonefish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:sunfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:surgeonfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:tiger_barb": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:triggerfish": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:tuna": {
+      "replace": true,
+      "value": {
+        "weight": 1.5
+      }
+    },
+    "hybrid-aquatic:uni": {
+      "replace": true,
+      "value": {
+        "weight": 0.15
+      }
+    },
+    "hybrid-aquatic:vampire_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:yeti_crab_claw": {
+      "replace": true,
+      "value": {
+        "weight": 0.3
+      }
+    },
+    "hybrid-aquatic:raft": {
+      "replace": true,
+      "value": {
+        "weight": 5.0
+      }
+    }
+  }
+}
