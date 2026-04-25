@@ -21,6 +21,15 @@ object ChestMassTicker {
 
     private val perContraption: MutableMap<UUID, MutableMap<Long, Double>> = WeakHashMap()
 
+    /** Total chest-content bonus currently tracked for a sublevel. 0.0 if unseen. Called from MergedMassTrackerMixin on every physics tick — must stay O(positions) and allocation-free. */
+    @JvmStatic
+    fun totalBonusFor(uuid: UUID): Double {
+        val map = perContraption[uuid] ?: return 0.0
+        var sum = 0.0
+        for (v in map.values) sum += v
+        return sum
+    }
+
     @SubscribeEvent
     fun onLevelTick(event: LevelTickEvent.Post) {
         val level = event.level as? ServerLevel ?: return

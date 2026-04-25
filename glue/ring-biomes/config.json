@@ -40,6 +40,11 @@
     "mass_per_weight_unit": 0.02,
     "max_bonus_per_block": 0
   },
+  "water_discount": {
+    "_comment": "When a contraption is sitting on water, scale its chest+player mass bonuses by (1 - discount). 0.7 = boats only feel 30% of the cargo penalty airships do, biasing players toward water transport for heavy loads. Detection is binary: 1 fluid lookup per physics tick at the bottom of the contraption's pose. Set enabled=false to disable.",
+    "enabled": true,
+    "discount": 0.7
+  },
   "player_mass": {
     "_comment": "Players standing on a Create Aeronautics contraption add their carried inventory weight to the contraption's physics mass. bonus_per_player = base_mass + Encumbered.calculateWeight(player) × inventory_multiplier. Applied via a mixin on MergedMassTracker.uploadData — every physics tick re-reads who's tracking the contraption and adds their weight; walking off stops the contribution immediately on the next tick (no state to clean up). max_per_player caps a single player's contribution; 0 = no cap.",
     "inventory_multiplier": 0.02,

@@ -92,6 +92,7 @@ def main():
     bic = cfg['bic_spawn_boost']
     chest_mass = cfg.get('chest_mass') or {}
     player_mass = cfg.get('player_mass') or {}
+    water_discount = cfg.get('water_discount') or {}
 
     # Wipe generated placed_features and ore biome modifiers
     for f in glob.glob(os.path.join(PF_DIR, 'ore_*.json')):
@@ -185,6 +186,14 @@ def main():
     with open(os.path.join(runtime_cfg_dir, 'player_mass.json'), 'w') as f:
         json.dump(player_mass_out, f, indent=2)
 
+    # Generate water_discount runtime config
+    water_discount_out = {
+        "enabled": water_discount.get('enabled', True),
+        "discount": water_discount.get('discount', 0.7),
+    }
+    with open(os.path.join(runtime_cfg_dir, 'water_discount.json'), 'w') as f:
+        json.dump(water_discount_out, f, indent=2)
+
     # Report
     pf_count = len(glob.glob(os.path.join(PF_DIR, 'ore_*.json')))
     bm_count = len([f for f in glob.glob(os.path.join(BM_DIR, '*.json'))
@@ -197,6 +206,10 @@ def main():
     print(f"  chest_mass: {chest_mass_out['mass_per_weight_unit']}/item × encumbered weight, {cap_desc}")
     pcap_desc = f"cap {player_mass_out['max_per_player']}/player" if player_mass_out['max_per_player'] > 0 else "no cap (linear)"
     print(f"  player_mass: {player_mass_out['inventory_multiplier']} × encumbered weight, base {player_mass_out['base_mass']}, {pcap_desc}")
+    if water_discount_out['enabled'] and water_discount_out['discount'] > 0:
+        print(f"  water_discount: -{int(water_discount_out['discount']*100)}% to chest+player bonuses while on water")
+    else:
+        print(f"  water_discount: disabled")
     print(f"  wrote {pf_count} placed_features, {bm_count} biome_modifiers")
 
 if __name__ == '__main__':
