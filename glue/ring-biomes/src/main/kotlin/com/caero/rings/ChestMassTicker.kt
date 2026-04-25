@@ -17,7 +17,7 @@ object ChestMassTicker {
 
     private val LOGGER = LoggerFactory.getLogger("caero_rings.ChestMassTicker")
 
-    private const val TICK_INTERVAL: Long = 40L
+    private const val TICK_INTERVAL: Long = 5L
 
     private val perContraption: MutableMap<UUID, MutableMap<Long, Double>> = WeakHashMap()
 
