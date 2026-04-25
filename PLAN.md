@@ -132,6 +132,18 @@ world feel genuinely big, so flying somewhere *means* something.
   `plans/chest-weight.md`. (First mixin in caero_rings; required adding `[[mixins]]`
   to `neoforge.mods.toml`, a `caero_rings.mixins.json`, and `compileOnly` deps on
   the sable+encumbered jars in `glue/ring-biomes/libs/`.)
+- **2026-04-25** — **Player-on-contraption weight implemented in `caero_rings`.**
+  Mixin into `dev.ryanhcode.sable.api.physics.mass.MergedMassTracker#uploadData`
+  at `@At("HEAD")` queries `subLevel.getLevel().players()`, finds those whose
+  `EntityMovementExtension.sable$getTrackingSubLevel()` matches the contraption,
+  and adds `Encumbered.calculateWeight(player) × inventory_multiplier` to the
+  merged tracker's `mass` field before sable uploads it to Rapier. Stateless
+  (each physics tick re-queries who's aboard, walks-off propagate within one
+  tick), no anchor positions, no per-player state to drift. Several other
+  approaches were tried first and rejected — see `plans/player-mass.md` and
+  `sable-findings.md` for the failure modes and why per-tick is correct (and
+  why throttling would actively break it). Same `inventory_multiplier` knob as
+  chest_mass so the calibration stays consistent.
 
 The **formal mod list with versions and sources** lives in
 [`mods.md`](./mods.md) and is the authoritative reference; update both files when

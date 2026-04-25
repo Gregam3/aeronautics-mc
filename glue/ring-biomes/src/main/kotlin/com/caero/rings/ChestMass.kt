@@ -16,6 +16,7 @@ object ChestMass {
     fun bonusFor(be: BlockEntity?): Double {
         if (be !is Container) return 0.0
         val cfg = config
+        val capped = cfg.maxBonusPerBlock > 0.0
         var sum = 0.0
         val size = be.containerSize
         var i = 0
@@ -24,7 +25,7 @@ object ChestMass {
             if (!stack.isEmpty) {
                 val w = EncumberedDataMaps.getWeight(stack.itemHolder).toDouble()
                 sum += w * stack.count * cfg.massPerWeightUnit
-                if (sum >= cfg.maxBonusPerBlock) return cfg.maxBonusPerBlock
+                if (capped && sum >= cfg.maxBonusPerBlock) return cfg.maxBonusPerBlock
             }
             i++
         }

@@ -91,6 +91,7 @@ def main():
     bias = cfg['ore_bias']
     bic = cfg['bic_spawn_boost']
     chest_mass = cfg.get('chest_mass') or {}
+    player_mass = cfg.get('player_mass') or {}
 
     # Wipe generated placed_features and ore biome modifiers
     for f in glob.glob(os.path.join(PF_DIR, 'ore_*.json')):
@@ -170,10 +171,19 @@ def main():
         "mass_per_weight_unit": chest_mass.get('mass_per_weight_unit', 0.1),
         "max_bonus_per_block": chest_mass.get('max_bonus_per_block', 200.0),
     }
-    chest_mass_dir = os.path.join(ROOT, 'src', 'main', 'resources', 'caero_rings')
-    os.makedirs(chest_mass_dir, exist_ok=True)
-    with open(os.path.join(chest_mass_dir, 'chest_mass.json'), 'w') as f:
+    runtime_cfg_dir = os.path.join(ROOT, 'src', 'main', 'resources', 'caero_rings')
+    os.makedirs(runtime_cfg_dir, exist_ok=True)
+    with open(os.path.join(runtime_cfg_dir, 'chest_mass.json'), 'w') as f:
         json.dump(chest_mass_out, f, indent=2)
+
+    # Generate player_mass runtime config
+    player_mass_out = {
+        "inventory_multiplier": player_mass.get('inventory_multiplier', 0.02),
+        "base_mass": player_mass.get('base_mass', 0.0),
+        "max_per_player": player_mass.get('max_per_player', 0.0),
+    }
+    with open(os.path.join(runtime_cfg_dir, 'player_mass.json'), 'w') as f:
+        json.dump(player_mass_out, f, indent=2)
 
     # Report
     pf_count = len(glob.glob(os.path.join(PF_DIR, 'ore_*.json')))
@@ -183,7 +193,10 @@ def main():
     for fam, ov in (bias.get('overrides') or {}).items():
         print(f"  ore_bias override [{fam}]: easy={ov.get('easy','-')} medium={ov.get('medium','-')} hard={ov.get('hard','-')}")
     print(f"  bic_spawn_boost: medium=+{bic['medium']}x hard=+{bic['hard']}x")
-    print(f"  chest_mass: {chest_mass_out['mass_per_weight_unit']}/item × encumbered weight, cap {chest_mass_out['max_bonus_per_block']}/container")
+    cap_desc = f"cap {chest_mass_out['max_bonus_per_block']}/container" if chest_mass_out['max_bonus_per_block'] > 0 else "no cap (linear)"
+    print(f"  chest_mass: {chest_mass_out['mass_per_weight_unit']}/item × encumbered weight, {cap_desc}")
+    pcap_desc = f"cap {player_mass_out['max_per_player']}/player" if player_mass_out['max_per_player'] > 0 else "no cap (linear)"
+    print(f"  player_mass: {player_mass_out['inventory_multiplier']} × encumbered weight, base {player_mass_out['base_mass']}, {pcap_desc}")
     print(f"  wrote {pf_count} placed_features, {bm_count} biome_modifiers")
 
 if __name__ == '__main__':

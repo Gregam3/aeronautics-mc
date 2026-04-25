@@ -36,8 +36,14 @@
     "medium_cap_nearby": 10
   },
   "chest_mass": {
-    "_comment": "Extra physics mass added per item in any container BE on a Create Aeronautics contraption. Per-item bonus = mass_per_weight_unit × stack.count × Encumbered weight. Sable's baseline solid-block mass is 1.0, so 0.1 ≈ 10% of a real block per item. max_bonus_per_block caps a single container so a stuffed shulker can't dominate physics.",
-    "mass_per_weight_unit": 0.1,
-    "max_bonus_per_block": 200.0
+    "_comment": "Extra physics mass added per item in any container BE on a Create Aeronautics contraption. Per-item bonus = mass_per_weight_unit × stack.count × Encumbered weight. Sable's baseline solid-block mass is 1.0, so 0.02 ≈ 2% of a real block per item. max_bonus_per_block caps a single container; set to 0 (or any non-positive value) for fully linear scaling — no cap.",
+    "mass_per_weight_unit": 0.02,
+    "max_bonus_per_block": 0
+  },
+  "player_mass": {
+    "_comment": "Players standing on a Create Aeronautics contraption add their carried inventory weight to the contraption's physics mass. bonus_per_player = base_mass + Encumbered.calculateWeight(player) × inventory_multiplier. Applied via a mixin on MergedMassTracker.uploadData — every physics tick re-reads who's tracking the contraption and adds their weight; walking off stops the contribution immediately on the next tick (no state to clean up). max_per_player caps a single player's contribution; 0 = no cap.",
+    "inventory_multiplier": 0.02,
+    "base_mass": 0.0,
+    "max_per_player": 0
   }
 }

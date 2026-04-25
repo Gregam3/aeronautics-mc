@@ -102,9 +102,48 @@ EncumberedDataMaps.getWeight(stack.getItemHolder())  // returns float
 
 Defaults to `1.0f` for items not in the data map. Reusing this for cargo mass keeps player-encumbrance and airship-cargo calibrated together — modify weights in one place.
 
+## Adding entity-on-contraption mass via the merged tracker
+
+`MergedMassTracker.update(float partialTick)` runs every physics tick (~20 Hz) and rebuilds `mass`, `centerOfMass`, `inertiaTensor` fields from scratch:
+1. Reset `mass = selfTracker.mass`, weighted CoM init.
+2. Iterate `subLevel.plot.contraptions` (Collection<KinematicContraption>) — each adds its mass and a weighted CoM contribution.
+3. Compute `inverseMass`, invert inertia.
+4. Call private `uploadData()` — pushes to Rapier via `setMassPropertiesFrom` (only if values differ from `lastMass` / `lastCenterOfMass` / `lastInertiaTensor`).
+5. Call private `setPreviousValues()` — store current values for next tick's change detection.
+
+**To add the inventory weight of players who are standing on a contraption** (so a loaded passenger makes the airship sink), mixin into `uploadData` at `@At("HEAD")` and:
+
+```java
+@Inject(method = "uploadData", at = @At("HEAD"))
+private void caero_rings$addStandingPlayerMass(CallbackInfo ci) {
+    if (subLevel == null || subLevel.isRemoved()) return;
+    double bonus = 0.0;
+    for (Player p : subLevel.getLevel().players()) {
+        if (((EntityMovementExtension) p).sable$getTrackingSubLevel() != subLevel) continue;
+        bonus += PlayerMass.bonusFor(p);  // Encumbered.calculateWeight × multiplier
+    }
+    if (bonus > 0.0) {
+        this.mass += bonus;
+        this.inverseMass = 1.0 / this.mass;
+    }
+}
+```
+
+Why this approach is clean:
+- **Stateless.** Each tick re-queries who's tracking the sub-level. Player walks off → next tick adds zero → uploadData detects mass change → uploads new (lighter) value. No cleanup logic, no anchor positions, no per-player maps that can drift.
+- **Right hook point.** `update()` resets `mass` from scratch every tick; modifying it AFTER the contraption-loop math but BEFORE upload means our addition rides alongside the existing math without being wiped.
+- **Free change detection.** The original `uploadData` early-exits if `mass == lastMass && centerOfMass equal && inertia equal`. With our addition, mass changes only when players join/leave or their inventory changes — Rapier upload only fires on real change.
+
+Throttling this mixin **would break it.** If we skipped some calls, `mass` would oscillate between the with-player and without-player values every cycle (because update() resets each tick) — the contraption would visibly bob at the throttle frequency. Per-tick is correct; the cost is dominated by `getTrackingSubLevel == subLevel` early-exits and is negligible at realistic player/contraption counts.
+
+CoM caveat: this implementation adds to `mass` only, not to `centerOfMass`. The contraption feels heavier, but the player's *off-center* position doesn't tilt the ship the way a real load would. Adding CoM contribution would require: un-normalizing CoM, fma-adding `playerMass × playerWorldPos`, re-normalizing — and would likely also need an inertia tensor update to stay consistent. Skipped because "feels heavier" was the goal; tilt is a polish item.
+
+`EntityMovementExtension.sable$getTrackingSubLevel()` is the canonical "is this entity riding on a sub-level" query. Returns `null` when not on one, returns the `SubLevel` instance when on one. Set by sable's collision system as the player walks/jumps on/off contraptions.
+
 ## Practical rules of thumb
 
 - **Read mass at assembly time? Easy.** Mixin on `PhysicsBlockPropertyHelper.getMass` with `@At("RETURN") cancellable=true`, `setReturnValue(original + bonus)`. Runs during `MassTracker.build`. Verified safe.
 - **Update mass mid-flight? Use the per-block delta path.** Call `SubLevelPhysicsSystem.updateMassDataFromBlockChange`, with a `ThreadLocal` override in your `getMass` mixin to control the old/new values. Never call `buildMassTracker()` on a flying contraption.
+- **Add transient mass that depends on something outside sable's block model** (entities, weather, players-on-board)? Mixin `MergedMassTracker.uploadData` at HEAD and modify `mass` in place. Stateless because `update()` resets every tick.
 - **Iterate blocks in a contraption's bbox?** Use `level.getBlockEntity(pos)` — sable's chunk system makes plot-region blocks visible through the regular `Level` API. `plot.getChunk(ChunkPos)` is sable's internal storage and may not return what you expect.
 - **Don't let total mass drop ≤ 0**, ever. The destruction check is unforgiving and runs on every container tick.
