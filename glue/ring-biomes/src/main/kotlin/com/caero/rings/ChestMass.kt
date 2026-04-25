@@ -1,17 +1,21 @@
 package com.caero.rings
 
+import com.google.gson.JsonParser
 import com.khofonyx.encumbered.datamaps.EncumberedDataMaps
 import net.minecraft.world.Container
 import net.minecraft.world.level.block.entity.BlockEntity
 
 object ChestMass {
-    private const val MASS_PER_WEIGHT_UNIT: Double = 0.1
+    private data class Config(val massPerWeightUnit: Double, val maxBonusPerBlock: Double)
 
-    private const val MAX_BONUS_PER_BLOCK: Double = 200.0
+    private val DEFAULT = Config(massPerWeightUnit = 0.1, maxBonusPerBlock = 200.0)
+
+    private val config: Config by lazy { loadConfig() }
 
     @JvmStatic
     fun bonusFor(be: BlockEntity?): Double {
         if (be !is Container) return 0.0
+        val cfg = config
         var sum = 0.0
         val size = be.containerSize
         var i = 0
@@ -19,11 +23,27 @@ object ChestMass {
             val stack = be.getItem(i)
             if (!stack.isEmpty) {
                 val w = EncumberedDataMaps.getWeight(stack.itemHolder).toDouble()
-                sum += w * stack.count * MASS_PER_WEIGHT_UNIT
-                if (sum >= MAX_BONUS_PER_BLOCK) return MAX_BONUS_PER_BLOCK
+                sum += w * stack.count * cfg.massPerWeightUnit
+                if (sum >= cfg.maxBonusPerBlock) return cfg.maxBonusPerBlock
             }
             i++
         }
         return sum
+    }
+
+    private fun loadConfig(): Config {
+        val stream = ChestMass::class.java.getResourceAsStream("/caero_rings/chest_mass.json")
+            ?: return DEFAULT
+        return try {
+            stream.bufferedReader().use { reader ->
+                val obj = JsonParser.parseReader(reader).asJsonObject
+                Config(
+                    massPerWeightUnit = obj["mass_per_weight_unit"]?.asDouble ?: DEFAULT.massPerWeightUnit,
+                    maxBonusPerBlock = obj["max_bonus_per_block"]?.asDouble ?: DEFAULT.maxBonusPerBlock,
+                )
+            }
+        } catch (e: Exception) {
+            DEFAULT
+        }
     }
 }

@@ -9,7 +9,9 @@ Per-stack mass bonus = `0.1 × stack.count × EncumberedDataMaps.getWeight(item)
 
 Sable's baseline solid-block mass is **1.0** (from `data/sable/physics_block_properties/heavy.json` etc. — `heavy` = 2.0, `light` = 0.5, the default block is 1.0). So a per-item value of **0.1 = 10% of a real block**, exactly as specified. A full stack of vanilla weight-1.0 items adds 6.4 mass (≈6 blocks worth); a fully-stacked double chest of stone-weight items adds ~345 mass before the cap. We piggyback on Encumbered's per-item weight data map rather than maintaining a duplicate config — items already calibrated for the player-encumbrance system stay consistent for airship cargo.
 
-`MAX_BONUS_PER_BLOCK = 200.0` caps a single container at ~200 blocks-equivalent of mass (e.g., a fully stacked shulker box of dense items would otherwise dominate). Adjust if playtesting shows it's wrong.
+`max_bonus_per_block = 200.0` caps a single container at ~200 blocks-equivalent of mass (e.g., a fully stacked shulker box of dense items would otherwise dominate). Adjust if playtesting shows it's wrong.
+
+**Tuning:** both values live in `glue/ring-biomes/config.json` under `chest_mass`. Edit, run `./scripts/apply-config.py`, then `./deploy.sh`. The script writes `src/main/resources/caero_rings/chest_mass.json`, which `ChestMass.kt` loads lazily on first call (Gson via classpath resource). Defaults inline if the resource is missing.
 
 ## Live recalculation (added 2026-04-25)
 

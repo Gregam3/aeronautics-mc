@@ -34,5 +34,10 @@
     "spawn_radius_max": 64,
     "hard_cap_nearby": 18,
     "medium_cap_nearby": 10
+  },
+  "chest_mass": {
+    "_comment": "Extra physics mass added per item in any container BE on a Create Aeronautics contraption. Per-item bonus = mass_per_weight_unit × stack.count × Encumbered weight. Sable's baseline solid-block mass is 1.0, so 0.1 ≈ 10% of a real block per item. max_bonus_per_block caps a single container so a stuffed shulker can't dominate physics.",
+    "mass_per_weight_unit": 0.1,
+    "max_bonus_per_block": 200.0
   }
 }

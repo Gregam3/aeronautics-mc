@@ -90,6 +90,7 @@ def main():
     ores = cfg['ore_list']['ores']
     bias = cfg['ore_bias']
     bic = cfg['bic_spawn_boost']
+    chest_mass = cfg.get('chest_mass') or {}
 
     # Wipe generated placed_features and ore biome modifiers
     for f in glob.glob(os.path.join(PF_DIR, 'ore_*.json')):
@@ -164,6 +165,16 @@ def main():
         }
         json.dump(mod, open(os.path.join(BM_DIR, f"boost_bic_{tier}.json"), 'w'), indent=2)
 
+    # Generate chest_mass runtime config (read at first ChestMass.bonusFor call)
+    chest_mass_out = {
+        "mass_per_weight_unit": chest_mass.get('mass_per_weight_unit', 0.1),
+        "max_bonus_per_block": chest_mass.get('max_bonus_per_block', 200.0),
+    }
+    chest_mass_dir = os.path.join(ROOT, 'src', 'main', 'resources', 'caero_rings')
+    os.makedirs(chest_mass_dir, exist_ok=True)
+    with open(os.path.join(chest_mass_dir, 'chest_mass.json'), 'w') as f:
+        json.dump(chest_mass_out, f, indent=2)
+
     # Report
     pf_count = len(glob.glob(os.path.join(PF_DIR, 'ore_*.json')))
     bm_count = len([f for f in glob.glob(os.path.join(BM_DIR, '*.json'))
@@ -172,6 +183,7 @@ def main():
     for fam, ov in (bias.get('overrides') or {}).items():
         print(f"  ore_bias override [{fam}]: easy={ov.get('easy','-')} medium={ov.get('medium','-')} hard={ov.get('hard','-')}")
     print(f"  bic_spawn_boost: medium=+{bic['medium']}x hard=+{bic['hard']}x")
+    print(f"  chest_mass: {chest_mass_out['mass_per_weight_unit']}/item × encumbered weight, cap {chest_mass_out['max_bonus_per_block']}/container")
     print(f"  wrote {pf_count} placed_features, {bm_count} biome_modifiers")
 
 if __name__ == '__main__':
