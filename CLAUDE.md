@@ -39,6 +39,23 @@ If the mod isn't installed:
 This rule supersedes "default to maximum autonomy" — installing a new mod into
 the instance is a state change Greg should sign off on.
 
+## Deploy after every change — no batching
+
+**After any change Greg might want to test in-game, run
+`./glue/<mod>/deploy.sh` immediately and confirm in the message.** This includes
+config tweaks (`config.json`), Kotlin/Java edits, mixin changes, and
+resource-file changes — anything that affects runtime behaviour.
+
+Don't batch multiple changes into one deploy "to save time," and don't hand off
+with `./gradlew build` only. The deploy step copies the new jar into the
+running PrismLauncher instance, but Minecraft only loads jars at process start
+— so Greg restarting Minecraft *before* the deploy lands wastes the test.
+Always deploy first, then tell Greg the build is ready to test.
+
+If a change isn't safe to deploy yet (e.g., known crash, mid-refactor), say so
+explicitly and wait. Never silently leave the deployed jar stale relative to
+what the conversation says is current.
+
 ## Self-testing (before declaring a task done)
 
 The project is a modded Minecraft server. Verify as much as possible without
