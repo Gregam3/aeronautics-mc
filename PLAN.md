@@ -132,6 +132,18 @@ world feel genuinely big, so flying somewhere *means* something.
   `plans/chest-weight.md`. (First mixin in caero_rings; required adding `[[mixins]]`
   to `neoforge.mods.toml`, a `caero_rings.mixins.json`, and `compileOnly` deps on
   the sable+encumbered jars in `glue/ring-biomes/libs/`.)
+- **2026-04-25** — **OPAC `maxPlayerClaims = 1` baseline + `/caero_addplayerclaim`
+  glue command.** Default per-player claim cap dropped from OPAC's stock 500 to
+  1 in `<instance>/config/openpartiesandclaims-server.toml`. Players must spend
+  coins (via the upcoming Numismatics→OPAC bridge / hub command-block setup)
+  to extend their claim quota. Supports heuristic #1 (trade — land becomes a
+  coin sink) and #4 (specialization — bigger bases require coin income).
+  `/caero_addplayerclaim <player> <amount>` (permission level 2, command-block-
+  runnable) wraps OPAC's `IPlayerConfigAPI.tryToSet(BONUS_CHUNK_CLAIMS, …)` so
+  the v1 bridge can be a coin-detector chain at the hub rather than a full
+  glue mod. Override snippet + gotchas in `configs/openpartiesandclaims-server.toml.overrides.md`
+  (key trap: section header is `[serverConfig.claims]`, not `[claims]` — get
+  it wrong and OPAC silently regenerates with defaults).
 - **2026-04-25** — **Player-on-contraption weight implemented in `caero_rings`.**
   Mixin into `dev.ryanhcode.sable.api.physics.mass.MergedMassTracker#uploadData`
   at `@At("HEAD")` queries `subLevel.getLevel().players()`, finds those whose
