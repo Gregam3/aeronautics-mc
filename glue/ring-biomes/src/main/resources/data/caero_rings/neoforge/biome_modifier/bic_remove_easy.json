@@ -1,0 +1,5 @@
+{
+  "type": "neoforge:remove_spawns",
+  "biomes": "#caero_rings:tier_easy",
+  "entity_types": "#caero_rings:bic_mobs"
+}

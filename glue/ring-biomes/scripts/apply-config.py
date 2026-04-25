@@ -148,7 +148,7 @@ def main():
         json.dump(remove, open(os.path.join(BM_DIR, f"ore_{tier}_remove.json"), 'w'), indent=2)
         json.dump(add, open(os.path.join(BM_DIR, f"ore_{tier}_add.json"), 'w'), indent=2)
 
-    # Generate BiC spawn boosters
+    # Generate BiC spawn boosters (medium / hard get MORE BiC mobs).
     for tier, boost in bic.items():
         if tier.startswith('_') or boost <= 0:
             continue
@@ -166,6 +166,24 @@ def main():
             "spawners": spawners,
         }
         json.dump(mod, open(os.path.join(BM_DIR, f"boost_bic_{tier}.json"), 'w'), indent=2)
+
+    # Strip ALL BiC spawns from easy-tier biomes — BiC's own datapack adds its
+    # mobs to `neoforge:any`, which leaks into easy biomes near spawn. Easy
+    # biomes should feel vanilla at night.
+    bic_remove = {
+        "type": "neoforge:remove_spawns",
+        "biomes": "#caero_rings:tier_easy",
+        "entity_types": "#caero_rings:bic_mobs",
+    }
+    json.dump(bic_remove, open(os.path.join(BM_DIR, "bic_remove_easy.json"), 'w'), indent=2)
+    # Generate the entity-type tag that the remove modifier references.
+    bic_tag_dir = os.path.join(DATA, 'tags', 'entity_type')
+    os.makedirs(bic_tag_dir, exist_ok=True)
+    bic_tag = {
+        "replace": False,
+        "values": [f"born_in_chaos_v1:{name}" for name, *_ in BIC_SPAWNS_BASE],
+    }
+    json.dump(bic_tag, open(os.path.join(bic_tag_dir, 'bic_mobs.json'), 'w'), indent=2)
 
     # Generate chest_mass runtime config (read at first ChestMass.bonusFor call)
     chest_mass_out = {
