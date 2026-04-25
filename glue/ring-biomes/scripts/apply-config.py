@@ -57,6 +57,15 @@ BIC_SPAWNS_BASE = [
     ('thornshell_crab', 8, 1, 1),
     ('krampus_henchman', 9, 2, 3),
     ('krampus', 2, 1, 1),
+    ('bone_imp', 25, 1, 2),
+    ('firelight', 15, 1, 3),
+    ('mr_pumpkin', 15, 1, 3),
+    ('mrs_pumpkin', 13, 1, 1),
+    ('pumpkin_bruiser', 10, 1, 1),
+    ('pumpkin_dunce', 16, 3, 3),
+    ('seared_spirit', 5, 1, 1),
+    ('senor_pumpkin', 10, 1, 2),
+    ('sir_pumpkinhead', 4, 1, 1),
 ]
 
 def format_factor(f):
