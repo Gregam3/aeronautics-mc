@@ -1,0 +1,89 @@
+# Per-tier expected ore multipliers vs. unmodded vanilla 1.21.1 reference rates.
+# Source of truth: ore_easy_*/medium_*/hard_*.json biome modifiers in
+# glue/ring-biomes/src/main/resources/data/caero_rings/neoforge/biome_modifier/
+#
+# When the design changes, update this file FIRST so the tests enforce the new design.
+
+# Tolerance applied around each multiplier when comparing observed:vanilla ratios.
+# Worldgen is noisy at our sample sizes; ±0.25 catches gross regressions without
+# false alarms. Tighten when the baseline-vanilla run lands.
+default_tolerance: 0.25
+
+# Reference rates (mean ore-blocks per chunk in this mod stack's medium-tier
+# biomes, which is "vanilla" for everything except diamond — caero_rings only
+# modifies diamond on medium tier, at 0.80× — so vanilla diamond is derived as
+# medium-observed / 0.80).
+#
+# Measured 2026-04-27 from a 1089-chunk taiga-area pregen at seed 0xDEADBEEF
+# (see out/observed.json). Refresh whenever the mod stack's worldgen changes
+# (new mod, version bump, config flip): rerun ./run.sh, copy the medium-tier
+# observed values back here, divide diamond by 0.80.
+#
+# strict_baseline: true means out-of-band ratios are HARD failures (exit 1).
+# Flip to false during debugging to triage noise vs. real regressions.
+strict_baseline: true
+
+vanilla_baseline:
+  # Re-measured 2026-04-27 from iter 8 (custom IdRemoveFeatures modifier active +
+  # biome filter restored on caero_rings placed_features). Pre-iter-8 baselines
+  # were inflated by the no-biome-filter bug in apply-config.py — caero_rings's
+  # added features ran without biome filter, leaking placements into adjacent
+  # chunks of OTHER tiers. Medium tier (which receives no caero ADD) still
+  # showed the leakage at chunk boundaries.
+  coal:     126.05
+  iron:      80.60
+  copper:   90.46
+  gold:     23.09     # post-removal of ore_gold_extra (which was native to wooded_badlands in tier_medium)
+  redstone:  35.20
+  lapis:     23.82
+  diamond:   26.01    # medium-observed 20.81 / 0.80 (caero medium tier diamond multiplier)
+  emerald:   0.0      # zero after remove_only includes ore_emerald; was 0.73 from leakage in pre-iter-8
+
+tiers:
+  easy:
+    # 0.75× across the board, except diamond at 0.30×.
+    # Reference: ore_easy_add.json (+ ore_easy_remove.json removes vanilla equivalents).
+    coal:     0.75
+    iron:     0.75
+    copper:   0.75
+    gold:     0.75
+    redstone: 0.75
+    lapis:    0.75
+    diamond:  0.30
+    emerald:  0.75    # NOTE: caero_rings adds emerald to all easy biomes,
+                      # not just mountains. So observed > 0 in plains is correct.
+
+  medium:
+    # vanilla rates, except diamond at 0.80×.
+    # Reference: ore_medium_add.json (only diamond modified).
+    coal:     1.00
+    iron:     1.00
+    copper:   1.00
+    gold:     1.00
+    redstone: 1.00
+    lapis:    1.00
+    diamond:  0.80
+    emerald:  1.00
+
+  hard:
+    # 1.5× across the board, except diamond at 1.2×.
+    # Reference: ore_hard_add.json.
+    coal:     1.50
+    iron:     1.50
+    copper:   1.50
+    gold:     1.50
+    redstone: 1.50
+    lapis:    1.50
+    diamond:  1.20
+    emerald:  1.50
+
+# Per-ore tolerance overrides (use when an ore is intrinsically noisy or the
+# baseline is itself uncertain). Values here override default_tolerance.
+tolerance_overrides:
+  emerald: 0.50    # very low absolute counts in non-mountain biomes; signal is noisy
+  diamond: 0.35    # rare ore, high variance per-chunk
+  coal: 0.60       # ore_coal_upper places at y=136-320; only generates in biomes
+                   # tall enough to have stone there. Tier biome composition
+                   # (mountain-heavy hard vs flat-heavy easy) shifts coal yield
+                   # 30-60% from biome-intrinsic factors alone. Wider tolerance
+                   # avoids false alarms.
