@@ -8,17 +8,14 @@
     "caero_rings:ore_iron_middle_0_75x",
     "caero_rings:ore_iron_upper_0_75x",
     "caero_rings:ore_copper_0_75x",
-    "caero_rings:ore_copper_large_0_75x",
     "caero_rings:ore_gold_0_75x",
-    "caero_rings:ore_gold_extra_0_75x",
     "caero_rings:ore_redstone_0_75x",
     "caero_rings:ore_redstone_lower_0_75x",
     "caero_rings:ore_lapis_0_75x",
     "caero_rings:ore_lapis_buried_0_75x",
     "caero_rings:ore_diamond_0_3x",
     "caero_rings:ore_diamond_medium_0_3x",
-    "caero_rings:ore_diamond_buried_0_3x",
-    "caero_rings:ore_emerald_0_75x"
+    "caero_rings:ore_diamond_buried_0_3x"
   ],
   "step": "underground_ores"
 }

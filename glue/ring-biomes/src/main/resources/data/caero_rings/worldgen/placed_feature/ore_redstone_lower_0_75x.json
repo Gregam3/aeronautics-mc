@@ -19,6 +19,9 @@
           "above_bottom": -32
         }
       }
+    },
+    {
+      "type": "minecraft:biome"
     }
   ]
 }

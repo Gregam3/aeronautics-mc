@@ -10,15 +10,22 @@
     }
   },
   "ore_list": {
-    "_comment": "Vanilla overworld ore placed_features that get rescaled. Each gets a scaled variant per non-1.0 tier.",
+    "_comment": "Vanilla overworld ore placed_features that get rescaled across every biome in a tier. Only include features that vanilla puts in EVERY overworld biome — features that vanilla restricts to specific biomes (copper_large in dripstone caves, gold_extra in badlands, emerald in mountains/meadow) get added to every tier biome here, which causes 3-8× over-supply. Move those to remove_only instead.",
     "ores": [
       "ore_coal_upper", "ore_coal_lower",
       "ore_iron_small", "ore_iron_middle", "ore_iron_upper",
-      "ore_copper", "ore_copper_large",
-      "ore_gold", "ore_gold_extra",
+      "ore_copper",
+      "ore_gold",
       "ore_redstone", "ore_redstone_lower",
       "ore_lapis", "ore_lapis_buried",
-      "ore_diamond", "ore_diamond_medium", "ore_diamond_buried",
+      "ore_diamond", "ore_diamond_medium", "ore_diamond_buried"
+    ],
+    "_remove_only_comment": "Stripped from every tier so they don't stack on the scaled replacements, but no scaled replacement is added. Two reasons a feature lands here: (a) it uses a placement format the count-scaling generator can't rescale (rarity_filter, uniform-count), or (b) it's biome-restricted in vanilla and spraying it across all tier biomes would over-supply the tier.",
+    "remove_only": [
+      "ore_gold_lower",
+      "ore_diamond_large",
+      "ore_copper_large",
+      "ore_gold_extra",
       "ore_emerald"
     ]
   },

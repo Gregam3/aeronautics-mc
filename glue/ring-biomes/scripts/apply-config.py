@@ -97,6 +97,7 @@ def factor_for(ore_name, tier, bias):
 def main():
     cfg = json.load(open(CFG))
     ores = cfg['ore_list']['ores']
+    remove_only = cfg['ore_list'].get('remove_only', [])
     bias = cfg['ore_bias']
     bic = cfg['bic_spawn_boost']
     chest_mass = cfg.get('chest_mass') or {}
@@ -125,7 +126,14 @@ def main():
 
     for ore, factor in needed:
         data = load_vanilla_ore(ore)
-        data['placement'] = [p for p in data['placement'] if p.get('type') != 'minecraft:biome']
+        # Keep the `minecraft:biome` placement modifier — it filters placements
+        # to positions whose biome contains the feature. With biome modifiers,
+        # the feature is added to every tier-tagged biome's feature list, so
+        # the filter passes there and skips elsewhere. Stripping it caused
+        # multi-biome chunks to run the feature once per overlapping biome
+        # (a chunk straddling plains + forest got 2× the placements), which
+        # showed up in the test harness as +30-100% extra ore vs the intended
+        # 0.75× / 1.5× multipliers.
         count_idx = next((i for i, p in enumerate(data['placement'])
                           if p.get('type') == 'minecraft:count' and isinstance(p.get('count'), int)), None)
         if count_idx is None:
@@ -136,26 +144,46 @@ def main():
         with open(os.path.join(PF_DIR, f"{ore}_{suffix}.json"), 'w') as f:
             json.dump(data, f, indent=2)
 
-    # Generate ore biome modifiers per tier (only ores with non-1.0 factor for that tier)
+    # Generate ore biome modifiers per tier.
+    #
+    # REMOVE: emit as `caero_rings:id_remove_features` (custom modifier in
+    # IdRemoveFeatures.kt). NeoForge's built-in `neoforge:remove_features`
+    # silently no-ops when targeting `minecraft:*` features in this mod stack
+    # — the pre-baked Holder.References in vanilla biomes don't compare equal
+    # to the modifier's freshly-resolved holders, so `removeIf(holderSet::contains)`
+    # never matches. The custom modifier compares by ResourceLocation instead.
+    # JSON differs from `neoforge:remove_features`: uses `feature_ids` (list of
+    # plain ID strings) instead of `features` (HolderSet codec).
+    #
+    # ADD: keep as `neoforge:add_features` (verified working — caero_rings:* features
+    # round-trip through the modifier engine fine since they share registry identity
+    # with the resolved holders).
+    #
+    # The remove list always includes `remove_only` (stripped from every tier
+    # so they don't stack on the scaled replacements); the add list is empty
+    # for those entries.
     for tier in ('easy', 'medium', 'hard'):
         tier_ores = [(o, factor_for(o, tier, bias)) for o in ores]
         scaled = [(o, f) for (o, f) in tier_ores if abs(f - 1.0) >= 1e-6]
-        if not scaled:
+        if not scaled and not remove_only:
             continue
+        remove_feature_ids = [f"minecraft:{o}" for (o, f) in scaled] \
+                           + [f"minecraft:{o}" for o in remove_only]
         remove = {
-            "type": "neoforge:remove_features",
+            "type": "caero_rings:id_remove_features",
             "biomes": f"#caero_rings:tier_{tier}",
-            "features": [f"minecraft:{o}" for (o, f) in scaled],
-            "steps": "underground_ores",
-        }
-        add = {
-            "type": "neoforge:add_features",
-            "biomes": f"#caero_rings:tier_{tier}",
-            "features": [f"caero_rings:{o}_{format_factor(f)}" for (o, f) in scaled],
-            "step": "underground_ores",
+            "feature_ids": remove_feature_ids,
+            "steps": ["underground_ores"],
         }
         json.dump(remove, open(os.path.join(BM_DIR, f"ore_{tier}_remove.json"), 'w'), indent=2)
-        json.dump(add, open(os.path.join(BM_DIR, f"ore_{tier}_add.json"), 'w'), indent=2)
+        if scaled:
+            add = {
+                "type": "neoforge:add_features",
+                "biomes": f"#caero_rings:tier_{tier}",
+                "features": [f"caero_rings:{o}_{format_factor(f)}" for (o, f) in scaled],
+                "step": "underground_ores",
+            }
+            json.dump(add, open(os.path.join(BM_DIR, f"ore_{tier}_add.json"), 'w'), indent=2)
 
     # Generate BiC spawn boosters (medium / hard get MORE BiC mobs).
     for tier, boost in bic.items():
