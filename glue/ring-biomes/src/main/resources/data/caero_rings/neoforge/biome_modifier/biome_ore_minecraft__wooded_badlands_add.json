@@ -1,0 +1,17 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "minecraft:wooded_badlands",
+  "features": [
+    "caero_rings:ore_coal_upper_0_7x",
+    "caero_rings:ore_coal_lower_0_7x",
+    "caero_rings:ore_iron_small_0_8x",
+    "caero_rings:ore_iron_middle_0_8x",
+    "caero_rings:ore_iron_upper_0_8x",
+    "caero_rings:ore_copper_0_5x",
+    "caero_rings:ore_gold_2_0x",
+    "caero_rings:ore_diamond_1_0x",
+    "caero_rings:ore_diamond_medium_1_0x",
+    "caero_rings:ore_diamond_buried_1_0x"
+  ],
+  "step": "underground_ores"
+}

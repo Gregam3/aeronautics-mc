@@ -1,9 +1,9 @@
 {
-  "feature": "minecraft:ore_coal",
+  "feature": "minecraft:ore_lapis_buried",
   "placement": [
     {
       "type": "minecraft:count",
-      "count": 22
+      "count": 3
     },
     {
       "type": "minecraft:in_square"
@@ -13,10 +13,10 @@
       "height": {
         "type": "minecraft:uniform",
         "max_inclusive": {
-          "below_top": 0
+          "absolute": 64
         },
         "min_inclusive": {
-          "absolute": 136
+          "above_bottom": 0
         }
       }
     },

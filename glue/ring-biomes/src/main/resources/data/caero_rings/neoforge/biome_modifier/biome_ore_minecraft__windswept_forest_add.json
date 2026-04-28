@@ -1,0 +1,17 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "minecraft:windswept_forest",
+  "features": [
+    "caero_rings:ore_coal_upper_1_3x",
+    "caero_rings:ore_coal_lower_1_3x",
+    "caero_rings:ore_iron_small_1_7x",
+    "caero_rings:ore_iron_middle_1_7x",
+    "caero_rings:ore_iron_upper_1_7x",
+    "caero_rings:ore_copper_0_5x",
+    "caero_rings:ore_gold_0_5x",
+    "caero_rings:ore_diamond_1_0x",
+    "caero_rings:ore_diamond_medium_1_0x",
+    "caero_rings:ore_diamond_buried_1_0x"
+  ],
+  "step": "underground_ores"
+}

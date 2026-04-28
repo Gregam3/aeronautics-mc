@@ -40,22 +40,27 @@ vanilla_baseline:
   emerald:   0.0      # zero after remove_only includes ore_emerald; was 0.73 from leakage in pre-iter-8
 
 tiers:
+  # Tier averages drift away from these targets as soon as biome_ore_overrides
+  # in config.json reshape per-biome ore mixes — even though each overridden
+  # biome's family-multipliers AVERAGE to the tier midpoint, the mix of biomes
+  # the pregen anchor lands on weights certain ores asymmetrically. The harder
+  # check is the per-biome table in analyze.py output (printed for biomes with
+  # ≥ 30 chunks). This YAML still catches gross regressions like "tier_easy
+  # remove modifier no longer running at all".
   easy:
-    # 0.75× across the board, except diamond at 0.30×.
-    # Reference: ore_easy_add.json (+ ore_easy_remove.json removes vanilla equivalents).
-    coal:     0.75
-    iron:     0.75
-    copper:   0.75
-    gold:     0.75
-    redstone: 0.75
-    lapis:    0.75
+    # 0.7× across the board, except diamond at 0.30×.
+    coal:     0.70
+    iron:     0.70
+    copper:   0.70
+    gold:     0.70
+    redstone: 0.70
+    lapis:    0.70
     diamond:  0.30
-    emerald:  0.75    # NOTE: caero_rings adds emerald to all easy biomes,
+    emerald:  0.70    # NOTE: caero_rings adds emerald to all easy biomes,
                       # not just mountains. So observed > 0 in plains is correct.
 
   medium:
     # vanilla rates, except diamond at 0.80×.
-    # Reference: ore_medium_add.json (only diamond modified).
     coal:     1.00
     iron:     1.00
     copper:   1.00
@@ -67,7 +72,6 @@ tiers:
 
   hard:
     # 1.5× across the board, except diamond at 1.2×.
-    # Reference: ore_hard_add.json.
     coal:     1.50
     iron:     1.50
     copper:   1.50

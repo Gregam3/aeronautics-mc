@@ -1,16 +1,147 @@
 {
   "_comment": "Master config for caero_rings. Edit values here, run ./scripts/apply-config.sh, then build+deploy.",
   "ore_bias": {
-    "_comment": "Default count multiplier per tier. 1.0 = vanilla. Per-ore overrides below. Ore 'family' matches the vanilla placed_feature prefix (e.g., 'diamond' covers ore_diamond, ore_diamond_medium, ore_diamond_buried).",
-    "easy": 0.75,
+    "_comment": "Default count multiplier per tier. 1.0 = vanilla. Per-ore overrides below. Ore 'family' matches the placed_feature prefix (e.g., 'diamond' covers ore_diamond, ore_diamond_medium, ore_diamond_buried; 'zinc' covers create's zinc_ore).",
+    "easy": 0.7,
     "medium": 1.0,
     "hard": 1.5,
     "overrides": {
       "diamond": { "easy": 0.3, "medium": 0.8, "hard": 1.2 }
     }
   },
+  "biome_ore_overrides": {
+    "_comment": "Per-biome ore multipliers vs VANILLA. Every biome listed gets its own pair of biome modifiers (id_remove_features for the tier-scaled & vanilla variants, add_features for the biome-specific variant). EVERY family must be specified, every value must be in [0.2, 2.0], and the 8 multipliers must average to the tier midpoint (easy 0.7, medium 1.0, hard 1.5). The 2.0× cap keeps us safely under Minecraft's count-placement maximum of 256 (highest vanilla count is ore_iron_upper=90, so 90×2.0=180). apply-config.py asserts all three constraints.",
+    "_families": ["iron", "coal", "copper", "gold", "redstone", "lapis", "diamond", "zinc"],
+    "_min_multiplier": 0.2,
+    "_max_multiplier": 2.0,
+
+    "minecraft:badlands": {
+      "_note": "HARD. Canon: badlands are gold country. Copper-poor surface.",
+      "gold": 2.0, "lapis": 2.0, "diamond": 1.8, "redstone": 1.5, "zinc": 2.0, "coal": 1.0, "iron": 1.2, "copper": 0.5
+    },
+    "minecraft:eroded_badlands": {
+      "_note": "HARD. Like badlands but rarer — push gold + redstone harder.",
+      "gold": 2.0, "redstone": 2.0, "diamond": 2.0, "lapis": 1.8, "iron": 1.0, "copper": 0.5, "coal": 0.7, "zinc": 2.0
+    },
+    "minecraft:wooded_badlands": {
+      "_note": "MEDIUM. Easier-to-reach badlands variant, milder gold bonus.",
+      "gold": 2.0, "iron": 0.8, "copper": 0.5, "coal": 0.7, "redstone": 1.0, "lapis": 1.0, "diamond": 1.0, "zinc": 1.0
+    },
+
+    "minecraft:jagged_peaks": {
+      "_note": "HARD. Iron + diamond country.",
+      "iron": 2.0, "diamond": 2.0, "redstone": 1.7, "coal": 1.5, "copper": 0.6, "gold": 0.5, "lapis": 1.7, "zinc": 2.0
+    },
+    "minecraft:frozen_peaks": {
+      "_note": "HARD. Iron + diamond + lapis.",
+      "iron": 2.0, "diamond": 2.0, "lapis": 2.0, "redstone": 1.5, "coal": 1.5, "copper": 0.5, "gold": 0.5, "zinc": 2.0
+    },
+    "minecraft:stony_peaks": {
+      "_note": "HARD. Iron + diamond, broader.",
+      "iron": 2.0, "diamond": 2.0, "redstone": 1.5, "coal": 1.5, "copper": 0.7, "gold": 0.7, "lapis": 1.6, "zinc": 2.0
+    },
+    "minecraft:snowy_slopes": {
+      "_note": "HARD. Approach to peaks — iron + diamond + lapis.",
+      "iron": 2.0, "diamond": 1.8, "redstone": 1.5, "coal": 1.5, "copper": 0.7, "gold": 0.5, "lapis": 2.0, "zinc": 2.0
+    },
+    "minecraft:ice_spikes": {
+      "_note": "HARD. Rare — diamond + lapis + redstone, low warm metals.",
+      "diamond": 2.0, "lapis": 2.0, "redstone": 2.0, "iron": 2.0, "zinc": 1.5, "coal": 0.5, "gold": 1.0, "copper": 1.0
+    },
+
+    "minecraft:swamp": {
+      "_note": "MEDIUM. Decay biome — coal-rich, iron poor.",
+      "coal": 2.0, "copper": 1.8, "iron": 0.5, "gold": 0.6, "diamond": 0.5, "redstone": 0.7, "lapis": 0.7, "zinc": 1.2
+    },
+    "minecraft:mangrove_swamp": {
+      "_note": "MEDIUM. Swamp variant — copper coast.",
+      "coal": 2.0, "copper": 1.8, "iron": 0.5, "gold": 0.7, "diamond": 0.5, "redstone": 0.7, "lapis": 0.7, "zinc": 1.1
+    },
+
+    "minecraft:desert": {
+      "_note": "MEDIUM. Sun-baked sandstone. Copper + lapis bias.",
+      "copper": 2.0, "lapis": 1.8, "gold": 1.4, "iron": 0.7, "coal": 0.4, "redstone": 0.5, "diamond": 0.4, "zinc": 0.8
+    },
+    "minecraft:savanna": {
+      "_note": "MEDIUM. Acacia drylands — copper-leaning.",
+      "copper": 1.8, "gold": 1.5, "iron": 0.8, "coal": 0.6, "redstone": 0.8, "lapis": 0.7, "diamond": 0.8, "zinc": 1.0
+    },
+    "minecraft:savanna_plateau": {
+      "_note": "MEDIUM. Plateau variant.",
+      "copper": 1.8, "gold": 1.7, "iron": 0.8, "coal": 0.6, "redstone": 0.7, "lapis": 0.7, "diamond": 0.7, "zinc": 1.0
+    },
+
+    "minecraft:dark_forest": {
+      "_note": "MEDIUM. Spooky redstone biome.",
+      "redstone": 2.0, "lapis": 1.8, "coal": 1.3, "iron": 0.7, "copper": 0.5, "gold": 0.4, "diamond": 0.5, "zinc": 0.8
+    },
+
+    "minecraft:windswept_hills": {
+      "_note": "MEDIUM. Iron mountains, cold and bare.",
+      "iron": 2.0, "coal": 1.5, "diamond": 1.3, "redstone": 0.8, "copper": 0.4, "gold": 0.5, "lapis": 0.5, "zinc": 1.0
+    },
+    "minecraft:windswept_gravelly_hills": {
+      "_note": "MEDIUM. Same shape as windswept_hills.",
+      "iron": 2.0, "coal": 1.5, "diamond": 1.3, "redstone": 0.8, "copper": 0.4, "gold": 0.5, "lapis": 0.5, "zinc": 1.0
+    },
+    "minecraft:windswept_forest": {
+      "_note": "MEDIUM. Forested mountain — softer iron lean.",
+      "iron": 1.7, "coal": 1.3, "diamond": 1.0, "redstone": 1.0, "copper": 0.5, "gold": 0.5, "lapis": 1.0, "zinc": 1.0
+    },
+    "minecraft:stony_shore": {
+      "_note": "MEDIUM. Iron-coastal flavour.",
+      "iron": 2.0, "coal": 1.3, "diamond": 1.0, "redstone": 0.7, "copper": 0.5, "gold": 0.6, "lapis": 0.7, "zinc": 1.2
+    },
+
+    "minecraft:mushroom_fields": {
+      "_note": "EASY. Alien — heavy redstone, low everything else. Rare island; reward the trip.",
+      "redstone": 2.0, "lapis": 1.5, "diamond": 1.0, "iron": 0.3, "coal": 0.2, "gold": 0.2, "copper": 0.2, "zinc": 0.2
+    },
+    "minecraft:cherry_grove": {
+      "_note": "EASY. Pretty rare biome — lapis+gold festive palette.",
+      "lapis": 1.7, "gold": 1.2, "redstone": 0.8, "iron": 0.5, "coal": 0.4, "copper": 0.5, "diamond": 0.3, "zinc": 0.2
+    },
+
+    "minecraft:jungle": {
+      "_note": "EASY. Hot/wet — zinc/copper bias.",
+      "zinc": 1.7, "copper": 1.5, "gold": 1.0, "iron": 0.4, "coal": 0.3, "redstone": 0.3, "diamond": 0.2, "lapis": 0.2
+    },
+    "minecraft:bamboo_jungle": {
+      "_note": "EASY. Stronger zinc lean.",
+      "zinc": 2.0, "copper": 1.5, "gold": 0.8, "iron": 0.4, "coal": 0.3, "redstone": 0.2, "diamond": 0.2, "lapis": 0.2
+    },
+    "minecraft:sparse_jungle": {
+      "_note": "EASY. Milder jungle.",
+      "zinc": 1.3, "copper": 1.3, "iron": 0.4, "coal": 0.5, "gold": 0.7, "redstone": 0.5, "diamond": 0.4, "lapis": 0.5
+    },
+
+    "regions_unexplored:ashen_woodland": {
+      "_note": "HARD. Burnt-volcanic — coal+redstone country.",
+      "coal": 2.0, "redstone": 2.0, "iron": 1.5, "copper": 1.0, "gold": 1.0, "diamond": 1.7, "lapis": 0.8, "zinc": 2.0
+    },
+    "regions_unexplored:arid_mountains": {
+      "_note": "HARD. Dry mountains — gold+copper bias.",
+      "gold": 2.0, "copper": 2.0, "iron": 1.5, "coal": 1.0, "diamond": 2.0, "redstone": 1.5, "lapis": 0.5, "zinc": 1.5
+    },
+    "regions_unexplored:joshua_desert": {
+      "_note": "HARD desert — copper+gold+lapis.",
+      "copper": 2.0, "gold": 2.0, "lapis": 2.0, "iron": 1.0, "coal": 0.7, "redstone": 1.0, "diamond": 1.3, "zinc": 2.0
+    },
+    "regions_unexplored:saguaro_desert": {
+      "_note": "HARD desert variant.",
+      "copper": 2.0, "gold": 2.0, "lapis": 2.0, "iron": 1.0, "coal": 0.7, "redstone": 1.0, "diamond": 1.5, "zinc": 1.8
+    },
+    "regions_unexplored:fungal_fen": {
+      "_note": "MEDIUM. Wet weird biome — redstone/zinc theme.",
+      "redstone": 2.0, "zinc": 1.8, "coal": 1.5, "iron": 0.6, "diamond": 0.7, "gold": 0.4, "copper": 0.5, "lapis": 0.5
+    },
+    "regions_unexplored:bayou": {
+      "_note": "MEDIUM. Swamp-style.",
+      "coal": 2.0, "copper": 1.5, "iron": 0.5, "zinc": 0.6, "redstone": 1.0, "gold": 0.7, "diamond": 0.7, "lapis": 1.0
+    }
+  },
   "ore_list": {
-    "_comment": "Vanilla overworld ore placed_features that get rescaled across every biome in a tier. Only include features that vanilla puts in EVERY overworld biome — features that vanilla restricts to specific biomes (copper_large in dripstone caves, gold_extra in badlands, emerald in mountains/meadow) get added to every tier biome here, which causes 3-8× over-supply. Move those to remove_only instead.",
+    "_comment": "Overworld ore placed_features that get rescaled across every biome in a tier. Only include features that get spawned in (effectively) every overworld biome — features that vanilla restricts to specific biomes (copper_large in dripstone caves, gold_extra in badlands, emerald in mountains/meadow) get added to every tier biome here, which causes 3-8× over-supply. Move those to remove_only instead. Strings default to namespace=minecraft. Use {namespace, name} for modded ores (e.g. Create's zinc_ore).",
     "ores": [
       "ore_coal_upper", "ore_coal_lower",
       "ore_iron_small", "ore_iron_middle", "ore_iron_upper",
@@ -18,7 +149,8 @@
       "ore_gold",
       "ore_redstone", "ore_redstone_lower",
       "ore_lapis", "ore_lapis_buried",
-      "ore_diamond", "ore_diamond_medium", "ore_diamond_buried"
+      "ore_diamond", "ore_diamond_medium", "ore_diamond_buried",
+      {"namespace": "create", "name": "zinc_ore"}
     ],
     "_remove_only_comment": "Stripped from every tier so they don't stack on the scaled replacements, but no scaled replacement is added. Two reasons a feature lands here: (a) it uses a placement format the count-scaling generator can't rescale (rarity_filter, uniform-count), or (b) it's biome-restricted in vanilla and spraying it across all tier biomes would over-supply the tier.",
     "remove_only": [
@@ -51,6 +183,13 @@
     "_comment": "When a contraption is sitting on water, scale its chest+player mass bonuses by (1 - discount). 0.7 = boats only feel 30% of the cargo penalty airships do, biasing players toward water transport for heavy loads. Detection is binary: 1 fluid lookup per physics tick at the bottom of the contraption's pose. Set enabled=false to disable.",
     "enabled": true,
     "discount": 0.7
+  },
+  "horse_encumbrance": {
+    "_comment": "Slow horses/donkeys/mules/camels in proportion to the rider's Encumbered inventory weight. limit = limit_multiplier × Encumbered.threshold2 (so the horse can carry 2× a player's normal limit). speed_after_slow = base × (1 - ratio × max_slow), where ratio = clamp(weight/limit, 0, 1). For the heavy-load zone to actually be reachable, set Encumbered's horse/donkey/mule/camel thresholds to 0 in config/encumbered-server.toml — otherwise Encumbered auto-dismounts at threshold2 and the slow only applies up to 50% of the curve.",
+    "enabled": true,
+    "limit_multiplier": 2.0,
+    "max_slow": 0.6,
+    "tick_interval": 20
   },
   "player_mass": {
     "_comment": "Players standing on a Create Aeronautics contraption add their carried inventory weight to the contraption's physics mass. bonus_per_player = base_mass + Encumbered.calculateWeight(player) × inventory_multiplier. Applied via a mixin on MergedMassTracker.uploadData — every physics tick re-reads who's tracking the contraption and adds their weight; walking off stops the contribution immediately on the next tick (no state to clean up). max_per_player caps a single player's contribution; 0 = no cap.",

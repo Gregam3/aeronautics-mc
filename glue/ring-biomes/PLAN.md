@@ -221,3 +221,203 @@ Tectonic-only.
 - **Deploy script added** at `deploy.sh`. Default target instance is
   `aeronautics-1.21.1` under `~/.local/share/PrismLauncher/instances/`;
   override with `PRISM_INSTANCE=<name> ./deploy.sh`.
+
+---
+
+## 12. Disabling Born in Chaos content (towers, bosses, individual mobs)
+
+**Why this lives here:** Born in Chaos (`born_in_chaos-1.7.5.jar`) is an
+mcreator mod with **no `config/*.toml` file**. There is no in-game options
+screen and no server-side config to edit. Spawn behaviour is controlled by
+two mechanisms:
+
+1. **Minecraft GameRules** — most BiC mobs have a per-mob boolean gamerule
+   (e.g. `serPumpkinheadSpawn`, `lifestealerSpawn`). Defaults to `true`. Set
+   to `false` to stop that mob spawning entirely. The full registered list
+   is in `BornInChaosV1ModGameRules.class`; `unzip -p` the jar and run
+   `strings` on that class to extract them. The naming is inconsistent
+   (mostly camelCase, two are descriptive sentences like
+   `theappearanceoftheNightmareStalker`).
+2. **Worldgen JSON** for structures, spawned by jigsaw on `surface_structures`
+   step, listed under `data/born_in_chaos_v1/worldgen/structure*/`.
+
+Several mini-bosses (`supreme_bonescaller`, `dire_hound_leader`,
+`dark_vortex`) have no gamerule and can only be suppressed via spawn-list
+edits or a `neoforge:remove_spawns` modifier.
+
+### 12.1 Three-layer disable strategy used in this mod
+
+When we want a BiC entity or structure gone, we apply some combination of:
+
+| Layer | What | Source of truth |
+|---|---|---|
+| A | Override BiC structure JSONs with `"biomes": []` | `src/main/resources/data/born_in_chaos_v1/worldgen/structure/<name>.json` |
+| B | Set `gamerule <name> false` on every world load | `src/main/resources/data/caero_rings/function/disable_bic_bosses.mcfunction` (tagged via `data/minecraft/tags/function/load.json`) |
+| C | Drop the entity from our active `add_spawns` boost lists | `BIC_BOSS_EXCLUDE` set in `scripts/apply-config.py` |
+
+Bosses use B + C. Towers use A. Individual mobs we want suppressed but BiC
+exposes no gamerule for: C only (or add a `neoforge:remove_spawns` modifier
+in `apply-config.py`, alongside the existing `bic_remove_easy.json` pattern).
+
+### 12.2 Repeating the procedure
+
+To disable additional BiC content:
+
+1. **Identify the lever.** Unzip the BiC jar to a tmp dir
+   (`unzip -q ~/.local/share/PrismLauncher/instances/1.21.1/minecraft/mods/born_in_chaos-*.jar -d /tmp/bic_inspect`).
+   Then:
+   - For mobs: `strings /tmp/bic_inspect/net/mcreator/borninchaosv/init/BornInChaosV1ModGameRules.class | grep -iE 'spawn|appearance|generation'` — if the mob you want has a gamerule, use layer B. If not, layer C only.
+   - For structures: `ls /tmp/bic_inspect/data/born_in_chaos_v1/worldgen/structure/`. Copy the matching JSON into `src/main/resources/data/born_in_chaos_v1/worldgen/structure/<name>.json` and replace `"biomes"` with `[]`. The rest of the file must stay byte-equivalent to the upstream so the override is structurally valid.
+
+2. **Apply edits.**
+   - Layer A: write the `"biomes": []` override file under our resources.
+   - Layer B: append a `gamerule <name> false` line to `disable_bic_bosses.mcfunction`.
+   - Layer C: add the entity registry name to `BIC_BOSS_EXCLUDE` in `scripts/apply-config.py`, then `python3 scripts/apply-config.py` to regenerate `boost_bic_*.json`.
+
+3. **Deploy:** `PRISM_INSTANCE=1.21.1 ./deploy.sh`.
+
+### 12.3 Caveats
+
+- **Existing chunks keep their structures.** Layer A only stops *future*
+  chunk generation. To clear an existing world, the player has to find and
+  destroy structures manually, or regenerate chunks.
+- **Gamerule load function fires only on world load.** For a running server,
+  either restart or run `/function caero_rings:disable_bic_bosses` once.
+  Gamerule values persist with the world — running it once is sufficient
+  unless someone manually flips a rule back.
+- **BiC adds spawns to `neoforge:any`** via its own biome modifier, so
+  ambient spawning of mobs without a gamerule will continue everywhere
+  unless explicitly removed via `neoforge:remove_spawns`. The
+  `bic_remove_easy.json` modifier already does this for the easy tier (uses
+  the auto-generated `caero_rings:bic_mobs` entity-type tag); to suppress
+  globally, mirror that pattern with a `tier_medium`/`tier_hard` (or
+  `neoforge:any`) target.
+- **The `caero_rings:bic_mobs` tag** generated in `apply-config.py` is built
+  from `BIC_SPAWNS_BASE` *without* applying `BIC_BOSS_EXCLUDE`, so it
+  intentionally still covers bosses. That is deliberate: easy-tier BiC
+  removal must strip everything, including bosses. Don't "fix" this to
+  filter the tag.
+
+### 12.4 What's currently disabled (2026-04-28)
+
+Bosses (Layer B + C):
+`serPumpkinheadSpawn`, `lifestealerSpawn`, `spiritOfChaosSpawn`,
+`motherSpiderSpawn`, `fallenChaosKnightSpawn`,
+`theappearanceoftheNightmareStalker`, `krampusSpawn`.
+
+Mini-bosses without a gamerule (Layer C only — still spawnable from BiC's
+own `neoforge:any` ambient list):
+`supreme_bonescaller`, `dire_hound_leader`, `dark_vortex`.
+
+Towers (Layer A): `dark_tower_forest`, `dark_tower_plain`,
+`dark_tower_taiga`, `observation_tower_forest`, `observation_tower_plains`.
+
+---
+
+## 13. Per-biome ore overrides (`biome_ore_overrides`)
+
+On top of the per-tier ore multipliers (§4b / `ore_bias` in `config.json`),
+each biome listed under `biome_ore_overrides` gets its own loot identity:
+badlands lean gold + lapis, peaks lean iron + diamond, swamps lean coal +
+copper, and so on. Pillar fit: heuristic 1 (biome-locked materials drive
+trade) + heuristic 4 (specialists outpost in the biome that yields their
+product).
+
+### 13.1 Authoring rules
+
+Every entry in `biome_ore_overrides` (`config.json`) must:
+
+1. Include **all 8 ore families** — `iron`, `coal`, `copper`, `gold`,
+   `redstone`, `lapis`, `diamond`, `zinc`. Missing a family is rejected by
+   `apply-config.py`. Required so the family-average is meaningful.
+2. Keep **every value in [0.2, 2.0]**. The 2.0 cap keeps the scaled count
+   below Minecraft's 256-cap on `count` placement modifiers (highest source
+   count is `ore_iron_upper=90`, so 90 × 2.0 = 180 — safe). 0.2 is a soft
+   floor so a biome never drops a family entirely.
+3. **Average to the tier midpoint** — easy 0.7, medium 1.0, hard 1.5 (from
+   `ore_bias.{easy,medium,hard}`). Tolerance ±0.05. The point: each biome's
+   total ore yield stays on its tier curve, the *shape* of the loot table
+   is what differs.
+
+`apply-config.py` enforces all three on every run and refuses to generate
+output until they pass. The validator messages name the offending biome.
+
+### 13.2 How modifiers are emitted
+
+For each biome `B` with override `{family: factor}`:
+
+- **ADD modifier** at `biome_ore_<ns>__<biome>_add.json`, targeting the
+  single biome `B`. Adds one variant per ore — `caero_rings:<ore>_<factor>x`.
+  Skipped per-family when the biome's factor equals the tier's factor (the
+  tier ADD modifier already places that variant on `B` via the tier tag —
+  emitting again would double-place).
+- **REMOVE modifier** at `biome_ore_<ns>__<biome>_remove.json`, also
+  targeting `B` only. Strips:
+  - the vanilla feature ID (e.g. `minecraft:ore_iron_upper`), unless the
+    biome's factor and the tier's factor are both 1.0 (in which case
+    nothing was added in step 1 and we want to keep vanilla);
+  - every tier-scaled variant we ever generate (`caero_rings:<ore>_<tier_factor>x`)
+    EXCEPT the variant the tier ADD legitimately placed on this biome at
+    its own tier-factor (when biome_factor == tier_factor and we
+    deliberately skipped the per-biome ADD for that family).
+
+The skip-when-tier-already-placed rules are critical: without them, the
+REMOVE strips the same variant the ADD placed and the family falls to ~0.
+This was caught the first time we ran the test harness against the design
+— badlands redstone went from 0.13× (broken) to 1.41× target after the
+fix.
+
+### 13.3 Ordering
+
+NeoForge biome-modifier phases run ADD → REMOVE. So both the tier ADD and
+the per-biome ADD have placed their variants by the time REMOVE phase
+starts. The tier REMOVE strips vanilla `minecraft:ore_*` from every tier
+member; the per-biome REMOVE strips tier-scaled variants from the
+overridden biome only. End state: the targeted biome's `underground_ores`
+step holds *only* the biome-scaled variants the per-biome ADD placed (or
+the tier-scaled variant when biome and tier agree).
+
+`caero_rings:id_remove_features` (custom, `IdRemoveFeatures.kt`) runs in
+REMOVE phase and matches by ResourceLocation, sidestepping the
+NeoForge-built-in `remove_features` Holder-identity bug for vanilla
+features (see §3 / IdRemoveFeatures.kt comment for the full story).
+
+### 13.4 Adding zinc / other namespaced ores
+
+`ore_list.ores` accepts either a bare string (`"ore_iron_upper"`, defaults
+to namespace `minecraft`) or `{"namespace": "create", "name": "zinc_ore"}`.
+For modded sources the placed-feature template is loaded from
+`scripts/feature_sources/<ns>/<name>.json` (committed to the repo so we
+don't depend on `/tmp/`). Generated variants live at
+`worldgen/placed_feature/<ns>_<name>_<factor>x.json` with id
+`caero_rings:<ns>_<name>_<factor>x`.
+
+### 13.5 Test harness coverage
+
+`test/ore-density/` boots a real NeoForge dedicated server, pregens around
+each tier's anchor biome, and aggregates ore counts per biome (added in
+this iteration — analyzer prints a per-biome row for any biome with ≥30
+chunks). Per-biome targets come from `config.json` directly so the test
+self-updates with the design. Tier-level YAML thresholds remain as a coarse
+"tier modifier didn't load at all" guard.
+
+Known limitations:
+- Sample size for individual biomes is often small (n ≈ 30–80 in a
+  256-block pregen). Differences below ±25% are mostly noise.
+- `ore_*_upper` features place at y=136+ — flat biomes (swamps, plains)
+  can't fully realize a 2× coal multiplier because most placements land in
+  air. Coal carries a 60% tolerance for this reason.
+- Tectonic raises terrain in some biomes (notably some Regions Unexplored
+  easy biomes), inflating their ore yield above the tier-default target
+  even when the modifier set is correct.
+
+### 13.6 Re-tuning workflow
+
+1. Edit `biome_ore_overrides` in `config.json`. Validator catches
+   bounds/sum/family mistakes immediately.
+2. `python3 scripts/apply-config.py` regenerates placed_features and biome
+   modifiers (committed to the repo).
+3. `./gradlew build && PRISM_INSTANCE=1.21.1 ./deploy.sh`.
+4. `cd test/ore-density && ./run.sh` for a fresh pregen + analysis. Use
+   `SKIP_PREGEN=1 ./run.sh` to re-analyze the prior world after analyzer
+   changes only.

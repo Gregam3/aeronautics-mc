@@ -1,0 +1,22 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "regions_unexplored:joshua_desert",
+  "features": [
+    "caero_rings:ore_coal_upper_0_7x",
+    "caero_rings:ore_coal_lower_0_7x",
+    "caero_rings:ore_iron_small_1_0x",
+    "caero_rings:ore_iron_middle_1_0x",
+    "caero_rings:ore_iron_upper_1_0x",
+    "caero_rings:ore_copper_2_0x",
+    "caero_rings:ore_gold_2_0x",
+    "caero_rings:ore_redstone_1_0x",
+    "caero_rings:ore_redstone_lower_1_0x",
+    "caero_rings:ore_lapis_2_0x",
+    "caero_rings:ore_lapis_buried_2_0x",
+    "caero_rings:ore_diamond_1_3x",
+    "caero_rings:ore_diamond_medium_1_3x",
+    "caero_rings:ore_diamond_buried_1_3x",
+    "caero_rings:create_zinc_ore_2_0x"
+  ],
+  "step": "underground_ores"
+}

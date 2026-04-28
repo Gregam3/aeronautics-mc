@@ -1,0 +1,22 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "minecraft:desert",
+  "features": [
+    "caero_rings:ore_coal_upper_0_4x",
+    "caero_rings:ore_coal_lower_0_4x",
+    "caero_rings:ore_iron_small_0_7x",
+    "caero_rings:ore_iron_middle_0_7x",
+    "caero_rings:ore_iron_upper_0_7x",
+    "caero_rings:ore_copper_2_0x",
+    "caero_rings:ore_gold_1_4x",
+    "caero_rings:ore_redstone_0_5x",
+    "caero_rings:ore_redstone_lower_0_5x",
+    "caero_rings:ore_lapis_1_8x",
+    "caero_rings:ore_lapis_buried_1_8x",
+    "caero_rings:ore_diamond_0_4x",
+    "caero_rings:ore_diamond_medium_0_4x",
+    "caero_rings:ore_diamond_buried_0_4x",
+    "caero_rings:create_zinc_ore_0_8x"
+  ],
+  "step": "underground_ores"
+}

@@ -15,7 +15,8 @@
     "caero_rings:ore_lapis_buried_1_5x",
     "caero_rings:ore_diamond_1_2x",
     "caero_rings:ore_diamond_medium_1_2x",
-    "caero_rings:ore_diamond_buried_1_2x"
+    "caero_rings:ore_diamond_buried_1_2x",
+    "caero_rings:create_zinc_ore_1_5x"
   ],
   "step": "underground_ores"
 }

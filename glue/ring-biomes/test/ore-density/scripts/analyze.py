@@ -135,6 +135,7 @@ ORE_GROUPS: dict[str, list[str]] = {
     "lapis":    ["minecraft:lapis_ore",    "minecraft:deepslate_lapis_ore"],
     "diamond":  ["minecraft:diamond_ore",  "minecraft:deepslate_diamond_ore"],
     "emerald":  ["minecraft:emerald_ore",  "minecraft:deepslate_emerald_ore"],
+    "zinc":     ["create:zinc_ore",        "create:deepslate_zinc_ore"],
 }
 
 def scan_world(world_dir: Path, tiers: dict[str, set[str]]):
@@ -160,12 +161,16 @@ def aggregate(world_dir: Path, tiers):
     chunk_count: Counter = Counter()
     biome_counts: dict[str, Counter] = defaultdict(Counter)
     ore_totals: dict[str, Counter] = defaultdict(Counter)
+    biome_chunks: Counter = Counter()
+    biome_ore_totals: dict[str, Counter] = defaultdict(Counter)
     for tier, biome, ores in scan_world(world_dir, tiers):
         chunk_count[tier] += 1
         biome_counts[tier][biome] += 1
+        biome_chunks[biome] += 1
         for k, v in ores.items():
             ore_totals[tier][k] += v
-    return chunk_count, biome_counts, ore_totals
+            biome_ore_totals[biome][k] += v
+    return chunk_count, biome_counts, ore_totals, biome_chunks, biome_ore_totals
 
 # ----- Assertion engine ------------------------------------------------------
 
@@ -227,7 +232,9 @@ def evaluate(observed: dict[str, dict[str, float]], expected: dict, chunk_count)
 
 # ----- Reporting -------------------------------------------------------------
 
-def print_summary(chunk_count, biome_counts, observed, passes, fails):
+def print_summary(chunk_count, biome_counts, observed, passes, fails,
+                  biome_chunks=None, biome_observed=None, baseline=None,
+                  biome_overrides=None, biome_to_tier_map=None, tier_default=None):
     print("\n=== Chunks per tier ===")
     for t in ("easy", "medium", "hard", "other"):
         print(f"  {t:<6} {chunk_count.get(t, 0)}")
@@ -238,7 +245,7 @@ def print_summary(chunk_count, biome_counts, observed, passes, fails):
             top = ", ".join(f"{b}:{c}" for b, c in biome_counts[t].most_common(5))
             print(f"  [{t}] {top}")
 
-    print("\n=== Observed per-chunk ore averages ===")
+    print("\n=== Observed per-chunk ore averages (per tier) ===")
     hdr = f"{'ore':<10} " + " ".join(f"{t:>10}" for t in ("easy", "medium", "hard"))
     print(hdr)
     print("-" * len(hdr))
@@ -248,6 +255,35 @@ def print_summary(chunk_count, biome_counts, observed, passes, fails):
             v = observed.get(t, {}).get(ore, 0.0)
             row += f" {v:>9.2f}"
         print(row)
+
+    if biome_observed and biome_chunks and baseline is not None:
+        # Print per-biome ore yields with vs-vanilla ratio + expected multiplier.
+        # Limit to biomes with enough chunks to be statistically meaningful.
+        MIN_CHUNKS_FOR_PER_BIOME = 30
+        candidates = [(b, n) for b, n in biome_chunks.items() if n >= MIN_CHUNKS_FOR_PER_BIOME]
+        candidates.sort(key=lambda x: -x[1])
+        if candidates:
+            print(f"\n=== Per-biome observed (chunks ≥ {MIN_CHUNKS_FOR_PER_BIOME}) ===")
+            ores_to_show = [o for o in ORE_GROUPS if baseline.get(o, 0) > 0]
+            print(f"{'biome':<46} {'tier':<6} {'n':>5}  " +
+                  " ".join(f"{o:>9}" for o in ores_to_show))
+            for biome, n in candidates:
+                tier = (biome_to_tier_map or {}).get(biome, "other")
+                row = f"{biome:<46} {tier:<6} {n:>5}  "
+                fams = (biome_overrides or {}).get(biome) if biome_overrides else None
+                for ore in ores_to_show:
+                    obs = biome_observed[biome].get(ore, 0.0)
+                    base = baseline.get(ore, 0.0)
+                    ratio = obs / base if base > 0 else 0.0
+                    if fams and ore in fams:
+                        target = fams[ore]
+                    elif tier in ("easy", "medium", "hard") and tier_default:
+                        target = tier_default.get(tier, {}).get(ore, 1.0)
+                    else:
+                        target = 1.0
+                    flag = ' ' if abs(ratio - target) <= max(0.25 * max(target, 0.5), 0.15) else '!'
+                    row += f" {ratio:>5.2f}/{target:<3.2g}{flag}"
+                print(row)
 
     print(f"\n=== Assertions: {len(passes)} pass, {len(fails)} fail ===")
     for f in fails:
@@ -273,12 +309,18 @@ def write_junit(passes, fails, out_path: Path, strict: bool):
         ET.SubElement(case, tag, {"message": f.get("message", "")[:200]}).text = json.dumps(f, indent=2)
     out_path.write_bytes(ET.tostring(suite, encoding="utf-8", xml_declaration=True))
 
-def write_observed_json(chunk_count, biome_counts, observed, out_path: Path):
-    out_path.write_text(json.dumps({
+def write_observed_json(chunk_count, biome_counts, observed, out_path: Path,
+                        biome_chunks=None, biome_observed=None):
+    payload = {
         "chunk_count":  dict(chunk_count),
         "biome_counts": {t: dict(c) for t, c in biome_counts.items()},
         "observed_per_chunk": observed,
-    }, indent=2))
+    }
+    if biome_chunks is not None:
+        payload["biome_chunks"] = dict(biome_chunks)
+    if biome_observed is not None:
+        payload["biome_observed_per_chunk"] = biome_observed
+    out_path.write_text(json.dumps(payload, indent=2))
 
 # ----- CLI -------------------------------------------------------------------
 
@@ -306,14 +348,44 @@ def main():
     tiers = load_tiers(args.repo_root)
 
     t0 = time.time()
-    chunk_count, biome_counts, ore_totals = aggregate(args.world, tiers)
+    chunk_count, biome_counts, ore_totals, biome_chunks, biome_ore_totals = aggregate(args.world, tiers)
     print(f"[info] scanned in {time.time()-t0:.1f}s")
 
     observed = {t: per_chunk_grouped(ore_totals[t], chunk_count[t]) for t in ("easy", "medium", "hard")}
-    write_observed_json(chunk_count, biome_counts, observed, args.out_dir / "observed.json")
+    biome_observed = {b: per_chunk_grouped(biome_ore_totals[b], biome_chunks[b]) for b in biome_chunks}
+    write_observed_json(chunk_count, biome_counts, observed, args.out_dir / "observed.json",
+                        biome_chunks=biome_chunks, biome_observed=biome_observed)
+
+    # Load per-biome design intent from caero_rings/config.json so we can show
+    # observed-vs-expected for overridden biomes alongside the tier averages.
+    cfg_path = args.repo_root / "glue/ring-biomes/config.json"
+    biome_overrides_design = {}
+    tier_default_design = {"easy": {}, "medium": {}, "hard": {}}
+    if cfg_path.exists():
+        cfg = json.loads(cfg_path.read_text())
+        bias = cfg.get("ore_bias", {})
+        diamond_overrides = (bias.get("overrides") or {}).get("diamond", {})
+        for tier in ("easy", "medium", "hard"):
+            for ore in ORE_GROUPS:
+                if ore == "diamond" and tier in diamond_overrides:
+                    tier_default_design[tier][ore] = diamond_overrides[tier]
+                elif ore == "emerald":
+                    tier_default_design[tier][ore] = bias.get(tier, 1.0)
+                else:
+                    tier_default_design[tier][ore] = bias.get(tier, 1.0)
+        for biome, fams in (cfg.get("biome_ore_overrides") or {}).items():
+            if biome.startswith("_"):
+                continue
+            biome_overrides_design[biome] = {k: v for k, v in fams.items() if not k.startswith("_")}
+    biome_to_tier_map = {b: t for t, members in tiers.items() for b in members}
 
     passes, fails = evaluate(observed, expected, chunk_count)
-    print_summary(chunk_count, biome_counts, observed, passes, fails)
+    print_summary(chunk_count, biome_counts, observed, passes, fails,
+                  biome_chunks=biome_chunks, biome_observed=biome_observed,
+                  baseline=expected.get("vanilla_baseline", {}),
+                  biome_overrides=biome_overrides_design,
+                  biome_to_tier_map=biome_to_tier_map,
+                  tier_default=tier_default_design)
     write_junit(passes, fails, args.out_dir / "ore-density.junit.xml",
                 strict=expected.get("strict_baseline", False))
 
