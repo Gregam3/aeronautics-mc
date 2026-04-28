@@ -1,5 +1,6 @@
 package com.caero.claims.command
 
+import com.caero.claims.CaeroClaims
 import com.caero.claims.data.ClaimDimensionData
 import com.caero.claims.service.ServerClaimService
 import com.mojang.brigadier.CommandDispatcher
@@ -44,6 +45,20 @@ object ClaimCommands {
                     Commands.literal("cancel").executes { ctx ->
                         val player = ctx.source.playerOrException
                         if (ServerClaimService.cancelClaim(player)) 1 else 0
+                    },
+                )
+                .then(
+                    Commands.literal("wand").executes { ctx ->
+                        val player = ctx.source.playerOrException
+                        val stack = net.minecraft.world.item.ItemStack(CaeroClaims.CLAIM_WAND.get())
+                        if (!player.inventory.add(stack)) {
+                            // Inventory full — drop at feet so the wand isn't lost.
+                            player.drop(stack, false)
+                        }
+                        player.sendSystemMessage(
+                            Component.literal("Claim Wand granted.").withStyle(ChatFormatting.GREEN),
+                        )
+                        1
                     },
                 ),
         )

@@ -1,4 +1,7 @@
 {
-  "item.caero_claims.claim_wand": "Claim Wand",
+  "item.caero_claims.claim_wand": "Caero Claim Wand",
+  "item.caero_claims.claim_wand.tooltip.line1": "Right-click two corners to mark a 3D volume.",
+  "item.caero_claims.claim_wand.tooltip.line2": "Cost: 1 spur per block, paid from your bank.",
+  "item.caero_claims.claim_wand.tooltip.line3": "Confirm with /caero-claim yes — claims are permanent.",
   "itemGroup.caero_claims": "Caero: Claims"
 }

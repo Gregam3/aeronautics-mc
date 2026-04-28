@@ -2,7 +2,10 @@
 
 **Mod ID:** `caero_claims`
 **Target:** Minecraft 1.21.1 · NeoForge · Kotlin (KFF)
-**Status:** Design locked 2026-04-28. Scaffolding next.
+**Status:** **v1 shipped 2026-04-28.** Verified end-to-end on the dev
+instance (claim, render, foreigner-test toggle, chat-command confirmation).
+Next: v2 mixin protection (piston / fluid / fire / dispenser / projectile),
+then v3 Create-compat, then OPAC removal.
 
 > **Supersedes** the design-only `glue/numismatics-opac-bridge/` plan. That design
 > bought OPAC chunk-claim quota with coins; this design replaces OPAC entirely
