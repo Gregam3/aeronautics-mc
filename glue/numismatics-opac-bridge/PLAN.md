@@ -2,7 +2,12 @@
 
 **Mod ID:** `caero_claims` *(tentative — "create aeronautics claims")*
 **Target:** Minecraft 1.21.1 · NeoForge
-**Status:** Design locked. Scaffolding next.
+**Status:** ⛔ **SUPERSEDED 2026-04-28** — see `glue/caero_claims/PLAN.md`.
+
+> This design bought OPAC chunk-claim quota with coins. The replacement design
+> drops OPAC entirely, claims arbitrary 3D block volumes (not chunks) directly,
+> and keeps Numismatics as the funding source. Mod ID `caero_claims` is reused
+> by the new design. Kept here for historical record only — do not implement.
 
 ---
 

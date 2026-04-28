@@ -18,7 +18,6 @@
 | **Create** | `mc1.21.1-6.0.9` | NeoForge | 2026-01-02 | [Modrinth](https://modrinth.com/mod/create) |
 | **Create: Aeronautics** | `1.0.3+mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/create-aeronautics) · [GitHub](https://github.com/Creators-of-Aeronautics/Simulated-Project) |
 | **Create: Numismatics** | `1.0.20+neoforge-mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/numismatics) |
-| **Terralith** | `2.5.8` | NeoForge + datapack | 2025-01-15 | [Modrinth](https://modrinth.com/mod/terralith) |
 | **Tectonic** | `3.0.22-neoforge-21.1` | NeoForge | 2026-04-15 | [Modrinth](https://modrinth.com/mod/tectonic) · [GitHub](https://github.com/Apollounknowndev/tectonic) |
 | ~~Continents~~ | ~~`1.1.13`~~ | ~~datapack~~ | ~~2026-03-29~~ | **Removed 2026-04-22 — conflicts with Tectonic on `noise_router/continents`; Tectonic picked.** |
 | **Distant Horizons** | `3.0.1-b-1.21.1` (beta) | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/distanthorizons) |
@@ -38,9 +37,7 @@
   `.research/repos/tectonic/`. Produces dramatic mountains, deep canyons, and
   cliff terrain across all landmasses. No file conflict with our Voronoi
   dimension preset (we touch the biome source, Tectonic touches elevation
-  density). Tectonic decides land shape + elevation drama; Terralith fills
-  land with biome variety; our glue mod assigns tiers via Voronoi seeds —
-  tiers are distance-based, so they work regardless of landmass shape.
+  density).
 - ~~Continents~~: dropped 2026-04-22. Tectonic's continents override wins when
   both are loaded, making Continents' spawn-island pin a no-op. A
   "patch-the-override from caero_rings" workaround is documented in
@@ -55,18 +52,9 @@
 
 | Mod | Latest 1.21.1 | Date | Source |
 |---|---|---|---|
-| **L_Ender's Cataclysm** | `3.27` | 2026-04-11 | [Modrinth](https://modrinth.com/mod/l_enders-cataclysm) |
-| **Mowzie's Mobs** | `1.8.2` | 2026-03-15 | [Modrinth](https://modrinth.com/mod/mowzies-mobs) |
 | **Born in Chaos** | `1.7.5` | 2026-04-12 | [Modrinth](https://modrinth.com/mod/borninchaos) |
 
-Stacking these three gives a wide variety of dangerous mobs (bosses, biome-specific
-creatures, cursed/chaotic variants). All three are actively maintained on 1.21.1
-NeoForge. No cross-mod conflicts documented on their Modrinth pages.
-
 ### 🚫 Not available on 1.21.1
-- **Alex's Mobs** — stuck at 1.20.1 (project `game_versions` confirms max is `1.20.1`,
-  last release 2024-09). **Dropped from the list.** Cataclysm + Mowzie's + Born in Chaos
-  cover similar ground.
 - **Creatures and Beasts** — no 1.21.1 versions on Modrinth.
 - **Rats** — no 1.21.1 versions at slug `rats`.
 
@@ -76,25 +64,21 @@ NeoForge. No cross-mod conflicts documented on their Modrinth pages.
 
 | Mod | Latest 1.21.1 | Loader | Date | Source |
 |---|---|---|---|---|
-| **Open Parties and Claims** | `neoforge-1.21.1-0.26.1` (beta) | NeoForge | 2026-04-12 | [Modrinth](https://modrinth.com/mod/open-parties-and-claims) |
+| ~~**Open Parties and Claims**~~ | ~~`neoforge-1.21.1-0.26.1`~~ | ~~NeoForge~~ | ~~2026-04-12~~ | ~~[Modrinth](https://modrinth.com/mod/open-parties-and-claims)~~ |
+| **`caero_claims`** (custom) | in development | NeoForge | 2026-04-28 | `glue/caero_claims/` |
 
-### 🚫 Not available on 1.21.1 via Modrinth
-- **FTB Chunks** — no Modrinth releases for 1.21.1 (the FTB team primarily publishes on
-  CurseForge). Needs a CurseForge check before final decision.
+### ⛔ OPAC marked for removal — 2026-04-28
+Decision: replace OPAC with a custom `caero_claims` mod that claims arbitrary 3D
+**block volumes** (not chunks), funded by Numismatics spurs at 1 spur per block.
+Per-claim render in-world only when holding the **Claim Wand** (Xaero is closed-
+source — no map-overlay API). Permanent claims, no unclaim, no refund.
 
-### ⚠️ Numismatics integration — NOT confirmed
-Open Parties and Claims does **not** natively accept Numismatics coins as a claim-cost
-currency. None of the land-claim mods I checked do. Two realistic paths:
+OPAC stays installed during `caero_claims` v1+v2 development for fallback
+protection. **Removed from instance and from this list when `caero_claims` v3
+(Create-compat) ships and passes GameTests.**
 
-1. **Admin-gated claim quota:** Use Open Parties and Claims' per-player claim-block
-   config, and let players buy quota increases by handing coins to an admin (or to a
-   Create shop that triggers a command via an addon like `Commandify`/`Command Blocks`).
-2. **Small glue datapack/mod:** Detect coin deposit into a specific container, grant
-   claim-block quota via OPAC's command API. Minimal Java — acceptable under our
-   "low-mod, high-config" pillar.
-
-**Decision needed from Greg:** accept the glue-mod path, or run claim purchases as an
-admin-mediated process at the hub?
+Plan: `glue/caero_claims/PLAN.md`. Supersedes the design-only
+`glue/numismatics-opac-bridge/` (kept as historical record).
 
 ---
 
@@ -127,6 +111,20 @@ admin-mediated process at the hub?
 ### Evaluated and rejected
 - **Diet**, **Spice of Life: Carrot Edition** — food-variety mods not available on
   1.21.1 NeoForge. Nutritional Balance covers their niche.
+
+---
+
+## Decoration / building blocks
+
+| Mod | Latest 1.21.1 | Loader | Date | Source |
+|---|---|---|---|---|
+| **Dawn of Time** | `1.6.4` | NeoForge | 2025-09-30 | [Modrinth](https://modrinth.com/mod/dawn-of-time) |
+| **MrCrayfish's Furniture Mod: Refurbished** | `1.0.22` | NeoForge | 2026-03 (CF) | [CurseForge](https://www.curseforge.com/minecraft/mc-mods/refurbished-furniture) |
+| **Fusion (Connected Textures)** | `1.2.12` | NeoForge | 2026-01-17 | [Modrinth](https://modrinth.com/mod/fusion-connected-textures) |
+
+Dawn of Time + Refurbished Furniture together cover Beth/Corey's canonical builds (Roman emblems, themed decoration, crates/chairs/tables). Both **client + server required** — players who join without them will see chunks render as "ghost holes" where those blocks should be. Fusion provides connected-texture support for visual quality. Added 2026-04-26 after first boot warned about missing block IDs in the world data.
+
+Known issue: `dawnoftimebuilder:white_cushion` recipe is malformed in 1.6.4 (missing `id` key in result spec) — block works, recipe doesn't. Worth filing upstream.
 
 ---
 
@@ -204,6 +202,41 @@ PLAN.md §7.
 - Xaero's Minimap + World Map: **native OPAC integration** (Modrinth page confirms claim
   chunks + ally display + in-map claim editing).
 - JourneyMap: **no OPAC integration** documented.
+
+---
+
+## Performance / profiling
+
+| Mod | Version | Loader | Notes |
+|---|---|---|---|
+| **Spark** | `1.10.124-neoforge` | NeoForge | Server-side profiler. `/spark profiler --thread "Server thread" --timeout 30` → web report. Server-only install (player clients don't need it). |
+| **ModernFix** | `5.27.3+mc1.21.1` | NeoForge | Memory-leak fixes + lazy-loading + small tick wins. Server-only install. |
+
+Added 2026-04-26 as part of performance tuning. See `runbook.md` §13 for the full perf-tuning record.
+
+### ❌ Tried + blocked
+- **Radium** (Lithium-equivalent for NeoForge) — Create explicitly declares incompatibility in its `mods.toml`. Jar bundled to disk as `.disabled` for reference; **do not re-enable without removing Create**.
+
+---
+
+## Disabled (kept on disk as `.disabled` jars for reference)
+
+| Mod | Reason |
+|---|---|
+| **Radioactive** (`3.8.0`) | Mcreator-generated `BlockRadiationProcedure.onEntityTick` ran a block-state lookup for every entity in the world every tick, costing ~50% of tick budget on a healthy server. Disabled 2026-04-26. |
+| **Alex's Mobs** (`1.22.17`) | Showed up as a 16× outlier in spark profile under load (heavy AI/pathfinding for many ambient mobs). Disabled 2026-04-26 server- and client-side. The mod was originally listed as "dropped" in the early plan because the 1.20.1 ceiling claim turned out to be wrong (current version is 1.22.17), then quietly slipped back into the instance — perf data confirmed the original drop was the right call. |
+
+---
+
+## Library / dependency mods
+
+These are pulled in as dependencies of the content mods above. Not gameplay-relevant by themselves; included for completeness so the modlist matches reality.
+
+| Mod | Version | Required by |
+|---|---|---|
+| **Architectury API** | `13.0.8+neoforge` | Cross-loader compat layer; common dep for Forge/Fabric ports. |
+| **Cloth Config API** | `15.0.140+neoforge` | Config UI library used by several content mods. |
+| **Framework** (MrCrayfish) | `0.13.11` | Hard dep of Refurbished Furniture. |
 
 ---
 

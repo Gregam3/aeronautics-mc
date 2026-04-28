@@ -1,0 +1,53 @@
+modLoader="kotlinforforge"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Land claims at block-volume resolution. Players spend Numismatics spurs (1 spur per
+block) to claim arbitrary 3D AABBs via a Claim Wand (right-click corner A, right-click
+corner B). Claims persist permanently — no unclaim, no refund. Foreign players cannot
+break, place, or interact inside another player's claim.
+
+Replaces Open Parties and Claims for this server. See glue/caero_claims/PLAN.md for
+the design rationale and protection-coverage waves.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5.9.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="numismatics"
+    type="required"
+    versionRange="[1.0.20,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="create"
+    type="required"
+    versionRange="[6.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
