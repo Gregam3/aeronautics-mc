@@ -12,9 +12,9 @@ object SkillLoginListener {
         val player = event.entity as? ServerPlayer ?: return
         val overworld: ServerLevel = player.server.overworld()
         val store = PendingXpStore.get(overworld)
-        val pending = store.drainForestryXp(player.uuid)
-        if (pending > 0L) {
-            SkillAttachment.grantForestryXp(player, pending)
+        for (kind in SkillKind.values()) {
+            val pending = store.drainXp(kind, player.uuid)
+            if (pending > 0L) SkillAttachment.grantXp(player, kind, pending)
         }
     }
 }

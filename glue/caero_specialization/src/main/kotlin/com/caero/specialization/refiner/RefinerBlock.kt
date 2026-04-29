@@ -1,6 +1,7 @@
 package com.caero.specialization.refiner
 
 import com.caero.specialization.CaeroSpecialization
+import com.caero.specialization.skill.SkillKind
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
@@ -12,17 +13,16 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 
 /**
- * Custom block: a forestry refiner. v1 refines unrefined charcoal into a
- * probabilistically-rolled tier driven by the placer's forestry skill (see
- * [com.caero.specialization.skill.SkillMath.qualityWeights]).
+ * Owner-bound, skill-tagged refiner block. Visually identical between industries
+ * for now (placeholder textures); see TEXTURES_TODO.md for the asset backlog.
  *
- * Each placed instance binds to the player who placed it (immutably, save admin
- * override). Right-click interaction is handled in [RefinerInteraction].
+ * The block instance carries its [skill] (FORESTRY, MINING, …); the matching
+ * [BlockEntityType] is looked up via [CaeroSpecialization.refinerBeType].
  */
-class ForestryRefinerBlock(properties: Properties) : Block(properties), EntityBlock {
+class RefinerBlock(properties: Properties, val skill: SkillKind) : Block(properties), EntityBlock {
 
     override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity =
-        ForestryRefinerBlockEntity(pos, state)
+        RefinerBlockEntity(pos, state, skill)
 
     override fun setPlacedBy(
         level: Level,
@@ -34,11 +34,11 @@ class ForestryRefinerBlock(properties: Properties) : Block(properties), EntityBl
         super.setPlacedBy(level, pos, state, placer, stack)
         if (level.isClientSide) return
         val player = placer as? Player ?: return
-        val be = level.getBlockEntity(pos) as? ForestryRefinerBlockEntity ?: return
+        val be = level.getBlockEntity(pos) as? RefinerBlockEntity ?: return
         be.bindOwner(player.uuid, player.gameProfile.name)
         CaeroSpecialization.LOG.info(
-            "forestry_refiner placed: pos={} owner={} ({})",
-            pos, player.gameProfile.name, player.uuid,
+            "{}_refiner placed: pos={} owner={} ({})",
+            skill.id, pos, player.gameProfile.name, player.uuid,
         )
     }
 }

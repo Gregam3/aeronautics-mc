@@ -1,0 +1,12 @@
+{
+  "type": "caero_specialization:quality_smelting",
+  "category": "misc",
+  "ingredient": { "item": "minecraft:raw_gold" },
+  "result": "minecraft:gold_nugget",
+  "unrefined_count": 4,
+  "low_count": 7,
+  "medium_count": 12,
+  "high_count": 18,
+  "experience": 1.0,
+  "cookingtime": 200
+}

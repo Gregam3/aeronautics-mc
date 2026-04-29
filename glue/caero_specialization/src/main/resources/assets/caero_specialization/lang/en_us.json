@@ -2,5 +2,7 @@
   "itemGroup.caero_specialization": "Caero — Specialization",
   "block.caero_specialization.forestry_refiner": "Forestry Refiner",
   "item.caero_specialization.forestry_refiner": "Forestry Refiner",
+  "block.caero_specialization.mining_refiner": "Mining Refiner",
+  "item.caero_specialization.mining_refiner": "Mining Refiner",
   "item.caero_specialization.ash": "Ash"
 }

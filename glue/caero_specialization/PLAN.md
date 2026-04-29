@@ -641,6 +641,15 @@ want to test in-game, no batching.
   v1.0 decisions were revised mid-build; see §16 for the as-shipped
   summary that supersedes earlier sections where they conflict.
 
+- **2026-04-29 v1.2 — shipped** — Mining industry added (raw_iron /
+  raw_gold / raw_copper, plus Create's raw_zinc). Quality now applies
+  on smelting output too: refined raw ores smelt to N nuggets per tier
+  (4 / 7 / 12 / 18) via a custom `QualitySmeltingRecipe`; vanilla iron /
+  gold / copper smelting + blasting is disabled. Refiner block is now
+  parameterised on a new `SkillKind` enum and registered twice
+  (forestry + mining); the same code path drives both. Diamonds excluded
+  per Greg. See §17 for the v1.2 deltas.
+
 ---
 
 ## 16. As-shipped (v1.1) — supersedes earlier sections where they conflict
@@ -738,3 +747,114 @@ src/main/resources/
 - Offline-owner skill snapshot on the BE so refining a dormant owner's refiner doesn't fall back to level-1 weights.
 - Forestry industry's *other* outputs (planks-quality, sapling-growth bonus per §11).
 - The `remove_coal_ores.json` biome modifier — leave or delete? Not yet revisited now that coal is refinable.
+
+---
+
+## 17. v1.2 deltas — mining industry
+
+Builds on v1.1. v1.1 sections still describe the live behaviour; v1.2 adds
+mining alongside forestry and introduces quality-aware smelting yield.
+
+### 17.1 SkillKind enum
+
+`com.caero.specialization.skill.SkillKind` was added:
+
+| id | displayName | XP curve | Refinable inputs | Refiner block |
+|---|---|---|---|---|
+| `forestry` | Forestry | 100 × (L−1)² | `#caero_specialization:refinable_forestry` (charcoal, coal) | `caero_specialization:forestry_refiner` (existing) |
+| `mining` | Mining | 100 × (L−1)² (same curve) | `#caero_specialization:refinable_mining` (raw_iron, raw_gold, raw_copper, **create:raw_zinc** if Create is loaded) | `caero_specialization:mining_refiner` (new) |
+
+`PlayerSkills` now has `forestryXp` + `miningXp` and a generic
+`xpFor(kind) / levelFor(kind) / grantXp(kind, amount)` interface.
+`PendingXpStore` keyed on `EnumMap<SkillKind, Map<UUID, Long>>` with NBT
+keys `PendingForestry` / `PendingMining` (forward-compatible).
+
+`SkillAttachment.grantForestryXp()` is gone — call sites use
+`grantXp(player, kind, amount)`.
+
+`/caero-spec level [player]` prints **both** skill blocks back-to-back, each
+with its own bar + roll-table.
+
+### 17.2 Refiner block parameterised
+
+The previous `ForestryRefinerBlock` / `ForestryRefinerBlockEntity` files were
+deleted. Replaced by:
+
+- `RefinerBlock(properties, skill: SkillKind)` — single concrete class.
+- `RefinerBlockEntity(pos, state, skill: SkillKind)` — single concrete BE.
+- Two registered `BlockEntityType`s (one per block) so vanilla can resolve
+  the type by block; the BE class is shared.
+- `RefinerInteraction` dispatches by `be.skill` and matches input items
+  against the corresponding tag.
+
+Mining-refiner recipe (Greg's pick): 8 × cobblestone ringing 1 × iron
+ingot. Forestry-refiner recipe unchanged (8 × smooth_stone + 1 ×
+`#minecraft:logs`).
+
+### 17.3 Smelting yield by quality
+
+The mining loop is **double-quality**: the refiner outputs raw ore tagged
+with a quality, and *the resulting smelt* multiplies the nugget yield
+based on that quality. Pure-vanilla smelting of raw ore (no refining)
+falls through to the UNREFINED bucket.
+
+| Quality | Iron / Gold / Copper / Zinc raw ore → nuggets |
+|---|---|
+| UNREFINED | **4** (≈ 0.44 ingots — vanilla nerf) |
+| LOW       | **7** (≈ 0.78 ingots) |
+| MEDIUM    | **12** (≈ 1.33 ingots) |
+| HIGH      | **18** (= 2 ingots — vanilla doubled) |
+
+Implemented via `caero_specialization:quality_smelting`, a custom recipe
+type extending `SmeltingRecipe`. `getType()` is still vanilla
+`RecipeType.SMELTING`, so regular furnaces pick it up. `assemble()` reads
+the input stack's quality component and emits `result × N` where N is
+configured per-tier in the recipe JSON.
+
+Vanilla recipes disabled (replaced with `neoforge:false`-conditional
+no-op overrides at the same paths):
+
+```
+data/minecraft/recipe/{iron,gold,copper}_ingot_from_smelting.json
+data/minecraft/recipe/{iron,gold,copper}_ingot_from_blasting.json
+data/create/recipe/smelting/zinc_ingot_from_raw_ore.json
+data/create/recipe/blasting/zinc_ingot_from_raw_ore.json
+```
+
+This forces all raw-ore smelting (and blasting) through our quality
+recipe. *Silk-touched ore-block* smelting recipes
+(`iron_ingot.json`, `gold_ingot.json`, …) are intentionally untouched —
+those are a niche path and currently keep their vanilla 1-ingot output.
+
+Copper output uses `create:copper_nugget` (vanilla doesn't have a copper
+nugget); zinc uses `create:zinc_nugget`. Both copper + zinc recipes are
+gated on `neoforge:mod_loaded create` so the mod degrades gracefully if
+Create is removed.
+
+### 17.4 Quality icons & tooltips on raw ores
+
+Same recipe as v1.1 charcoal/coal: vanilla model overrides at
+`assets/{minecraft,create}/models/item/<raw_ore>.json` with the standard
+predicate scheme; per-tier layered models at
+`assets/caero_specialization/models/item/<raw_ore>_{low,medium,high}.json`
+reusing the existing `quality_border_*` PNGs.
+
+`QualityClientProperty.register()` now registers the predicate on
+charcoal, coal, raw_iron, raw_gold, raw_copper, and raw_zinc (the last
+guarded behind a runtime `BuiltInRegistries.ITEM.containsKey`).
+
+`QualityTooltip` switched from per-item allowlist to a tag check: anything
+in `refinable_forestry` ∪ `refinable_mining` gets the "Quality: X" line.
+
+### 17.5 Diamonds & co. — deferred
+
+Per Greg (2026-04-29): "exclude diamonds for now". No diamond / lapis /
+redstone / emerald / nether quartz refining in v1.2. See `TEXTURES_TODO.md`
+"Items deliberately not covered" for the rationale.
+
+### 17.6 Texture backlog
+
+`TEXTURES_TODO.md` (new file) tracks every art asset that currently uses
+a vanilla / placeholder texture. Both refiners are visually placeholder
+(forestry: smooth_stone + stripped_oak_log front; mining: cobblestone +
+iron_ore front). Quality borders are PIL-generated 1 px frames.

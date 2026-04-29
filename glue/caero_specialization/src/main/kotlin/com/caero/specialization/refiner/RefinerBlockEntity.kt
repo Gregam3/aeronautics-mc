@@ -2,15 +2,20 @@ package com.caero.specialization.refiner
 
 import com.caero.specialization.CaeroSpecialization
 import com.caero.specialization.config.CaeroSpecializationConfig
+import com.caero.specialization.skill.SkillKind
 import net.minecraft.core.BlockPos
 import net.minecraft.core.HolderLookup
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockState
 import java.util.UUID
 
-class ForestryRefinerBlockEntity(pos: BlockPos, state: BlockState) :
-    BlockEntity(CaeroSpecialization.FORESTRY_REFINER_BE_TYPE.get(), pos, state) {
+class RefinerBlockEntity(
+    pos: BlockPos,
+    state: BlockState,
+    val skill: SkillKind,
+) : BlockEntity(typeFor(skill), pos, state) {
 
     var ownerUuid: UUID? = null
         private set
@@ -73,5 +78,12 @@ class ForestryRefinerBlockEntity(pos: BlockPos, state: BlockState) :
         tag.putString("OwnerName", ownerName)
         tag.putInt("FeeSpurs", feeSpurs)
         tag.putLong("Coffer", coffer)
+    }
+
+    companion object {
+        private fun typeFor(skill: SkillKind): BlockEntityType<RefinerBlockEntity> = when (skill) {
+            SkillKind.FORESTRY -> CaeroSpecialization.FORESTRY_REFINER_BE_TYPE.get()
+            SkillKind.MINING -> CaeroSpecialization.MINING_REFINER_BE_TYPE.get()
+        }
     }
 }

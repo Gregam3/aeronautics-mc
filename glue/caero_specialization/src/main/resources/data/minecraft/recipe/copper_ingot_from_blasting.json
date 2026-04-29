@@ -1,0 +1,10 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:false" }
+  ],
+  "type": "minecraft:smelting",
+  "ingredient": { "item": "minecraft:dirt" },
+  "result": { "id": "minecraft:dirt" },
+  "experience": 0.0,
+  "cookingtime": 1
+}

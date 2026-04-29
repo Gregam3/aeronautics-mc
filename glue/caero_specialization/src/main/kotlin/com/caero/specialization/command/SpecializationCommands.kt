@@ -1,12 +1,15 @@
 package com.caero.specialization.command
 
-import com.caero.specialization.refiner.ForestryRefinerBlockEntity
+import com.caero.specialization.refiner.RefinerBlockEntity
 import com.caero.specialization.refiner.XpFeedback
 import com.caero.specialization.skill.SkillAttachment
+import com.caero.specialization.skill.SkillKind
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.LongArgumentType
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.suggestion.SuggestionProvider
 import dev.ithundxr.createnumismatics.Numismatics
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
@@ -15,16 +18,12 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerPlayer
 
-/**
- * `/caero-spec ...`:
- *   - `level` — print your own specialization profile (level + bar + roll table)
- *   - `level <player>` — print someone else's profile
- *   - `skill set <player> <xp>` — admin override (op-2)
- *   - `setfee <pos> <fee>` — owner sets per-refine fee
- *   - `setowner <pos> <player>` — admin override of refiner ownership (op-2)
- *   - `withdraw <pos>` — owner drains accrued coffer into their bank
- */
 object SpecializationCommands {
+
+    private val SKILL_KIND_SUGGESTIONS = SuggestionProvider<CommandSourceStack> { _, builder ->
+        for (k in SkillKind.values()) builder.suggest(k.id)
+        builder.buildFuture()
+    }
 
     fun register(dispatcher: CommandDispatcher<CommandSourceStack>) {
         dispatcher.register(
@@ -43,10 +42,14 @@ object SpecializationCommands {
                             Commands.literal("set")
                                 .requires { it.hasPermission(2) }
                                 .then(
-                                    Commands.argument("player", EntityArgument.player())
+                                    Commands.argument("kind", StringArgumentType.word())
+                                        .suggests(SKILL_KIND_SUGGESTIONS)
                                         .then(
-                                            Commands.argument("xp", LongArgumentType.longArg(0L))
-                                                .executes(::skillSet),
+                                            Commands.argument("player", EntityArgument.player())
+                                                .then(
+                                                    Commands.argument("xp", LongArgumentType.longArg(0L))
+                                                        .executes(::skillSet),
+                                                ),
                                         ),
                                 ),
                         ),
@@ -90,25 +93,29 @@ object SpecializationCommands {
         return printProfile(ctx, player)
     }
 
-    private fun levelOther(ctx: CommandContext<CommandSourceStack>): Int {
-        val target = EntityArgument.getPlayer(ctx, "player")
-        return printProfile(ctx, target)
-    }
+    private fun levelOther(ctx: CommandContext<CommandSourceStack>): Int =
+        printProfile(ctx, EntityArgument.getPlayer(ctx, "player"))
 
     private fun printProfile(ctx: CommandContext<CommandSourceStack>, player: ServerPlayer): Int {
         val skills = SkillAttachment.get(player)
-        val lines = XpFeedback.renderSkillSummary(player, skills)
-        for (line in lines) ctx.source.sendSuccess({ line }, false)
+        for (line in XpFeedback.renderSkillSummary(player, skills)) {
+            ctx.source.sendSuccess({ line }, false)
+        }
         return 1
     }
 
     private fun skillSet(ctx: CommandContext<CommandSourceStack>): Int {
+        val kindArg = StringArgumentType.getString(ctx, "kind")
+        val kind = SkillKind.fromId(kindArg) ?: run {
+            ctx.source.sendFailure(Component.literal("Unknown skill '$kindArg'. Try: ${SkillKind.values().joinToString(", ") { it.id }}"))
+            return 0
+        }
         val player = EntityArgument.getPlayer(ctx, "player")
         val xp = LongArgumentType.getLong(ctx, "xp")
-        val updated = SkillAttachment.get(player).withForestryXp(xp)
+        val updated = SkillAttachment.get(player).withXp(kind, xp)
         SkillAttachment.set(player, updated)
         ctx.source.sendSuccess(
-            { Component.literal("${player.gameProfile.name} forestry XP set to $xp (lvl ${updated.forestryLevel})") },
+            { Component.literal("${player.gameProfile.name} ${kind.id} XP set to $xp (lvl ${updated.levelFor(kind)})") },
             true,
         )
         return 1
@@ -117,7 +124,7 @@ object SpecializationCommands {
     private fun setFee(ctx: CommandContext<CommandSourceStack>): Int {
         val pos = BlockPosArgument.getBlockPos(ctx, "pos")
         val level = ctx.source.level
-        val be = level.getBlockEntity(pos) as? ForestryRefinerBlockEntity ?: run {
+        val be = level.getBlockEntity(pos) as? RefinerBlockEntity ?: run {
             ctx.source.sendFailure(Component.literal("No refiner at $pos."))
             return 0
         }
@@ -137,7 +144,7 @@ object SpecializationCommands {
         val pos = BlockPosArgument.getBlockPos(ctx, "pos")
         val target = EntityArgument.getPlayer(ctx, "player")
         val level = ctx.source.level
-        val be = level.getBlockEntity(pos) as? ForestryRefinerBlockEntity ?: run {
+        val be = level.getBlockEntity(pos) as? RefinerBlockEntity ?: run {
             ctx.source.sendFailure(Component.literal("No refiner at $pos."))
             return 0
         }
@@ -152,7 +159,7 @@ object SpecializationCommands {
     private fun withdraw(ctx: CommandContext<CommandSourceStack>): Int {
         val pos = BlockPosArgument.getBlockPos(ctx, "pos")
         val level = ctx.source.level
-        val be = level.getBlockEntity(pos) as? ForestryRefinerBlockEntity ?: run {
+        val be = level.getBlockEntity(pos) as? RefinerBlockEntity ?: run {
             ctx.source.sendFailure(Component.literal("No refiner at $pos."))
             return 0
         }

@@ -2,6 +2,7 @@ package com.caero.specialization.refiner
 
 import com.caero.specialization.quality.Quality
 import com.caero.specialization.skill.PlayerSkills
+import com.caero.specialization.skill.SkillKind
 import com.caero.specialization.skill.SkillMath
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
@@ -12,12 +13,13 @@ import net.minecraft.sounds.SoundSource
 
 /**
  * UI surface for skill XP gains:
- *   - per-refine action-bar message with mini progress bar
- *   - chat broadcast on level up (one line per level crossed)
- *   - level-up sound effect ([SoundEvents.PLAYER_LEVELUP])
+ *   - per-batch action-bar message with mini progress bar
+ *   - chat broadcast on level up (one line per level crossed) +
+ *     vanilla [SoundEvents.PLAYER_LEVELUP]
+ *   - `/caero-spec level` summary via [renderSkillSummary]
  *
- * The chat / level-up path is also reused by the [com.caero.specialization.command.SpecializationCommands]
- * `/caero-spec level` command via [renderSkillSummary].
+ * All output is keyed on a [SkillKind] so the same surface works for forestry,
+ * mining, and future industries.
  */
 object XpFeedback {
 
@@ -26,46 +28,45 @@ object XpFeedback {
     private const val FILLED_GLYPH = "█"
     private const val EMPTY_GLYPH = "░"
 
-    fun onForestryXpGain(
+    fun onXpGain(
         player: ServerPlayer,
+        kind: SkillKind,
         before: PlayerSkills,
         after: PlayerSkills,
-        amount: Long,
     ) {
-        if (after.forestryLevel > before.forestryLevel) {
-            for (lv in (before.forestryLevel + 1)..after.forestryLevel) {
-                broadcastLevelUp(player, lv)
-            }
+        val beforeLv = before.levelFor(kind)
+        val afterLv = after.levelFor(kind)
+        if (afterLv > beforeLv) {
+            for (lv in (beforeLv + 1)..afterLv) broadcastLevelUp(player, kind, lv)
         }
     }
 
-    /**
-     * Chat-line summary intended to fire after a refine batch — combines the
-     * per-output breakdown with the player's skill-level snapshot.
-     */
     fun reportRefineBatch(
         player: ServerPlayer,
+        kind: SkillKind,
         breakdown: QualityBreakdown,
         xpEarned: Long,
         before: PlayerSkills,
         after: PlayerSkills,
     ) {
-        // Action-bar (transient): tier breakdown + level + bar.
         val ab = Component.empty()
-        ab.append(Component.literal("Refined ×${breakdown.total} ").withStyle(ChatFormatting.GOLD))
-        ab.append(breakdownLabel(breakdown))
-        ab.append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY))
-        ab.append(Component.literal("+$xpEarned XP").withStyle(ChatFormatting.GREEN))
-        ab.append(Component.literal(" ").withStyle(ChatFormatting.GRAY))
-        ab.append(progressBar(after.forestryXp, ACTION_BAR_BAR_WIDTH))
-        ab.append(Component.literal(" Lv${after.forestryLevel}").withStyle(ChatFormatting.AQUA))
+            .append(Component.literal("Refined ×${breakdown.total} ").withStyle(ChatFormatting.GOLD))
+            .append(breakdownLabel(breakdown))
+            .append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal("+$xpEarned XP").withStyle(ChatFormatting.GREEN))
+            .append(Component.literal(" ").withStyle(ChatFormatting.GRAY))
+            .append(progressBar(after.xpFor(kind), ACTION_BAR_BAR_WIDTH))
+            .append(Component.literal(" Lv${after.levelFor(kind)}").withStyle(ChatFormatting.AQUA))
         player.displayClientMessage(ab, true)
     }
 
-    fun broadcastLevelUp(player: ServerPlayer, newLevel: Int) {
+    fun broadcastLevelUp(player: ServerPlayer, kind: SkillKind, newLevel: Int) {
         val msg = Component.empty()
             .append(Component.literal("★ ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
-            .append(Component.literal("Forestry level $newLevel!").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
+            .append(
+                Component.literal("${kind.displayName} level $newLevel!")
+                    .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD),
+            )
             .append(Component.literal("  ").withStyle(ChatFormatting.RESET))
             .append(qualityWeightsTooltip(newLevel))
         player.sendSystemMessage(msg)
@@ -80,39 +81,38 @@ object XpFeedback {
         )
     }
 
-    /** Render the player's current skill level + bar + breakdown for `/caero-spec level`. */
+    /** `/caero-spec level [player]` body — one block per skill. */
     fun renderSkillSummary(player: ServerPlayer, skills: PlayerSkills): List<Component> {
         val out = mutableListOf<Component>()
-        val level = skills.forestryLevel
-        val toNext = SkillMath.xpToNextLevel(skills.forestryXp)
-        val totalXp = skills.forestryXp
-
         out += Component.literal("— Specialization profile: ${player.gameProfile.name} —")
             .withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.BOLD)
+        for (kind in SkillKind.values()) {
+            val xp = skills.xpFor(kind)
+            val level = skills.levelFor(kind)
+            val toNext = SkillMath.xpToNextLevel(xp)
 
-        val header = Component.empty()
-            .append(Component.literal("Forestry  ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
-            .append(Component.literal("Lv$level").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
-            .append(Component.literal("   "))
-            .append(progressBar(skills.forestryXp, SUMMARY_BAR_WIDTH))
-        out += header
+            out += Component.empty()
+                .append(Component.literal("${kind.displayName}  ")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+                .append(Component.literal("Lv$level").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+                .append(Component.literal("   "))
+                .append(progressBar(xp, SUMMARY_BAR_WIDTH))
 
-        val xpLine = if (level >= SkillMath.MAX_LEVEL) {
-            Component.literal("  ${formatNumber(totalXp)} XP · MAX LEVEL").withStyle(ChatFormatting.GOLD)
-        } else {
-            Component.literal("  ${formatNumber(totalXp)} XP · ${formatNumber(toNext)} to Lv${level + 1}")
-                .withStyle(ChatFormatting.GRAY)
+            out += if (level >= SkillMath.MAX_LEVEL) {
+                Component.literal("  ${formatNumber(xp)} XP · MAX LEVEL").withStyle(ChatFormatting.GOLD)
+            } else {
+                Component.literal("  ${formatNumber(xp)} XP · ${formatNumber(toNext)} to Lv${level + 1}")
+                    .withStyle(ChatFormatting.GRAY)
+            }
+            out += qualityWeightsTooltip(level)
         }
-        out += xpLine
-
-        out += qualityWeightsTooltip(level)
         return out
     }
 
     private fun qualityWeightsTooltip(level: Int): Component {
         val w = SkillMath.qualityWeights(level)
         return Component.empty()
-            .append(Component.literal("Roll: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(Component.literal("  Roll: ").withStyle(ChatFormatting.DARK_GRAY))
             .append(Component.literal("${pct(w.high)}% H").withStyle(ChatFormatting.GREEN))
             .append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY))
             .append(Component.literal("${pct(w.medium)}% M").withStyle(ChatFormatting.YELLOW))
@@ -153,7 +153,6 @@ object XpFeedback {
     private fun pct(d: Double): Int = (d * 100.0).toInt().coerceIn(0, 100)
 
     private fun formatNumber(n: Long): String {
-        // Compact thousands separator without locale quirks.
         if (n < 1_000L) return n.toString()
         val s = n.toString()
         val out = StringBuilder()

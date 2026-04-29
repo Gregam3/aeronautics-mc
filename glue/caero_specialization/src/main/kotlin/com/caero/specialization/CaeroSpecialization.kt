@@ -7,10 +7,12 @@ import com.caero.specialization.fuel.FuelBurnTime
 import com.caero.specialization.quality.Quality
 import com.caero.specialization.quality.QualityComponent
 import com.caero.specialization.quality.QualityTooltip
-import com.caero.specialization.refiner.ForestryRefinerBlock
-import com.caero.specialization.refiner.ForestryRefinerBlockEntity
+import com.caero.specialization.recipe.QualitySmeltingRecipe
+import com.caero.specialization.refiner.RefinerBlock
+import com.caero.specialization.refiner.RefinerBlockEntity
 import com.caero.specialization.refiner.RefinerInteraction
 import com.caero.specialization.skill.SkillAttachment
+import com.caero.specialization.skill.SkillKind
 import com.caero.specialization.skill.SkillLoginListener
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
@@ -18,6 +20,7 @@ import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+import net.minecraft.world.item.crafting.RecipeSerializer
 import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.material.MapColor
@@ -46,33 +49,53 @@ object CaeroSpecialization {
     val BLOCKS: DeferredRegister.Blocks = DeferredRegister.createBlocks(MOD_ID)
     val BLOCK_ENTITY_TYPES: DeferredRegister<BlockEntityType<*>> =
         DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID)
+    val RECIPE_SERIALIZERS: DeferredRegister<RecipeSerializer<*>> =
+        DeferredRegister.create(Registries.RECIPE_SERIALIZER, MOD_ID)
     val CREATIVE_TABS: DeferredRegister<CreativeModeTab> =
         DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID)
 
-    val FORESTRY_REFINER = BLOCKS.registerBlock(
-        "forestry_refiner",
-        ::ForestryRefinerBlock,
-        BlockBehaviour.Properties.of()
-            .mapColor(MapColor.STONE)
-            .strength(2.0f)
-            .requiresCorrectToolForDrops(),
+    private val refinerBlockProps = BlockBehaviour.Properties.of()
+        .mapColor(MapColor.STONE)
+        .strength(2.0f)
+        .requiresCorrectToolForDrops()
+
+    val FORESTRY_REFINER = BLOCKS.registerBlock("forestry_refiner",
+        { props -> RefinerBlock(props, SkillKind.FORESTRY) },
+        refinerBlockProps,
+    )
+    val MINING_REFINER = BLOCKS.registerBlock("mining_refiner",
+        { props -> RefinerBlock(props, SkillKind.MINING) },
+        refinerBlockProps,
     )
 
     val FORESTRY_REFINER_ITEM = ITEMS.registerItem("forestry_refiner") { props ->
         BlockItem(FORESTRY_REFINER.get(), props)
     }
-
-    val ASH_ITEM = ITEMS.registerItem("ash") { props ->
-        AshItem(props)
+    val MINING_REFINER_ITEM = ITEMS.registerItem("mining_refiner") { props ->
+        BlockItem(MINING_REFINER.get(), props)
     }
 
-    val FORESTRY_REFINER_BE_TYPE: DeferredHolder<BlockEntityType<*>, BlockEntityType<ForestryRefinerBlockEntity>> =
+    val ASH_ITEM = ITEMS.registerItem("ash") { props -> AshItem(props) }
+
+    val FORESTRY_REFINER_BE_TYPE: DeferredHolder<BlockEntityType<*>, BlockEntityType<RefinerBlockEntity>> =
         BLOCK_ENTITY_TYPES.register("forestry_refiner") { ->
             @Suppress("DEPRECATION")
-            BlockEntityType.Builder
-                .of({ pos, state -> ForestryRefinerBlockEntity(pos, state) }, FORESTRY_REFINER.get())
-                .build(null)
+            BlockEntityType.Builder.of(
+                { pos, state -> RefinerBlockEntity(pos, state, SkillKind.FORESTRY) },
+                FORESTRY_REFINER.get(),
+            ).build(null)
         }
+    val MINING_REFINER_BE_TYPE: DeferredHolder<BlockEntityType<*>, BlockEntityType<RefinerBlockEntity>> =
+        BLOCK_ENTITY_TYPES.register("mining_refiner") { ->
+            @Suppress("DEPRECATION")
+            BlockEntityType.Builder.of(
+                { pos, state -> RefinerBlockEntity(pos, state, SkillKind.MINING) },
+                MINING_REFINER.get(),
+            ).build(null)
+        }
+
+    val QUALITY_SMELTING_SERIALIZER: DeferredHolder<RecipeSerializer<*>, QualitySmeltingRecipe.Serializer> =
+        RECIPE_SERIALIZERS.register("quality_smelting") { -> QualitySmeltingRecipe.Serializer }
 
     @Suppress("unused")
     val CREATIVE_TAB = CREATIVE_TABS.register("main", Supplier {
@@ -81,8 +104,13 @@ object CaeroSpecialization {
             .icon { ItemStack(FORESTRY_REFINER_ITEM.get()) }
             .displayItems { _, output ->
                 output.accept(FORESTRY_REFINER_ITEM.get())
+                output.accept(MINING_REFINER_ITEM.get())
                 output.accept(ASH_ITEM.get())
-                for (base in arrayOf(Items.CHARCOAL, Items.COAL)) {
+                val sampleBases = arrayOf(
+                    Items.CHARCOAL, Items.COAL,
+                    Items.RAW_IRON, Items.RAW_GOLD, Items.RAW_COPPER,
+                )
+                for (base in sampleBases) {
                     for (q in arrayOf(Quality.LOW, Quality.MEDIUM, Quality.HIGH)) {
                         val sample = ItemStack(base)
                         sample.set(QualityComponent.QUALITY.get(), q)
@@ -102,6 +130,7 @@ object CaeroSpecialization {
         ITEMS.register(MOD_BUS)
         BLOCKS.register(MOD_BUS)
         BLOCK_ENTITY_TYPES.register(MOD_BUS)
+        RECIPE_SERIALIZERS.register(MOD_BUS)
         CREATIVE_TABS.register(MOD_BUS)
         QualityComponent.COMPONENTS.register(MOD_BUS)
         SkillAttachment.ATTACHMENTS.register(MOD_BUS)

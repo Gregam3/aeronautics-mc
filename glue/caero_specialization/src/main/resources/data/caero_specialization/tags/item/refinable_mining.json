@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:raw_iron",
+    "minecraft:raw_gold",
+    "minecraft:raw_copper",
+    {
+      "id": "create:raw_zinc",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/raw_iron"
+  },
+  "overrides": [
+    { "predicate": { "caero_specialization:quality": 0.3 }, "model": "caero_specialization:item/raw_iron_low" },
+    { "predicate": { "caero_specialization:quality": 0.6 }, "model": "caero_specialization:item/raw_iron_medium" },
+    { "predicate": { "caero_specialization:quality": 0.9 }, "model": "caero_specialization:item/raw_iron_high" }
+  ]
+}

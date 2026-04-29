@@ -7,6 +7,7 @@ import com.caero.specialization.quality.QualityComponent
 import com.caero.specialization.skill.PendingXpStore
 import com.caero.specialization.skill.PlayerSkills
 import com.caero.specialization.skill.SkillAttachment
+import com.caero.specialization.skill.SkillKind
 import com.caero.specialization.skill.SkillMath
 import dev.ithundxr.createnumismatics.Numismatics
 import net.minecraft.ChatFormatting
@@ -20,27 +21,32 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.TagKey
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
+import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.item.Items
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 import java.util.UUID
 
 /**
- * v1 refiner UX (no GUI yet — PLAN.md §14 step 6):
- *
- * - **Empty hand right-click on forestry refiner** → owner / your level / fee readout.
- * - **Right-click with charcoal** → refine 1 charcoal (probabilistic tier roll).
- * - **Sneak + right-click with charcoal** → refine the entire held stack.
- *
- * Output tier is rolled per item from [SkillMath.qualityWeights] using the
- * refiner-owner's current forestry level. Even at level 1, ~1 % of rolls are
- * HIGH, so a 64-charcoal batch produces a mixed inventory rather than 64
- * identical LOW stacks.
+ * Skill-aware right-click handler. The refiner block carries a [SkillKind];
+ * inputs accepted are whatever sits in the matching tag
+ * (`#caero_specialization:refinable_<skill>`). Output mirrors the input item
+ * type with a quality data component applied.
  */
 object RefinerInteraction {
+
+    val REFINABLE_FORESTRY: TagKey<Item> =
+        TagKey.create(net.minecraft.core.registries.Registries.ITEM, CaeroSpecialization.id("refinable_forestry"))
+    val REFINABLE_MINING: TagKey<Item> =
+        TagKey.create(net.minecraft.core.registries.Registries.ITEM, CaeroSpecialization.id("refinable_mining"))
+
+    private fun tagFor(kind: SkillKind): TagKey<Item> = when (kind) {
+        SkillKind.FORESTRY -> REFINABLE_FORESTRY
+        SkillKind.MINING -> REFINABLE_MINING
+    }
 
     @SubscribeEvent
     fun onRightClick(event: PlayerInteractEvent.RightClickBlock) {
@@ -49,7 +55,8 @@ object RefinerInteraction {
         if (event.hand != InteractionHand.MAIN_HAND) return
 
         val pos = event.pos
-        val be = level.getBlockEntity(pos) as? ForestryRefinerBlockEntity ?: return
+        val be = level.getBlockEntity(pos) as? RefinerBlockEntity ?: return
+        val skill = be.skill
 
         val held = player.getItemInHand(InteractionHand.MAIN_HAND)
 
@@ -58,12 +65,12 @@ object RefinerInteraction {
         event.cancellationResult = InteractionResult.SUCCESS
 
         val ownerSkills = ownerSkillsView(level, be.ownerUuid)
-        val ownerLevel = ownerSkills.forestryLevel
+        val ownerLevel = ownerSkills.levelFor(skill)
 
-        val isFuelInput = held.item == Items.CHARCOAL || held.item == Items.COAL
-        if (held.isEmpty || !isFuelInput) {
+        val isRefinable = !held.isEmpty && held.`is`(tagFor(skill))
+        if (!isRefinable) {
             val isOwnerEmptyHand = be.ownerUuid == player.uuid
-            if (isOwnerEmptyHand && player.isShiftKeyDown) {
+            if (isOwnerEmptyHand && player.isShiftKeyDown && held.isEmpty) {
                 sendFeeChooser(player, be, pos)
             } else {
                 sendInfo(player, be, ownerLevel)
@@ -73,7 +80,7 @@ object RefinerInteraction {
         val heldQuality = held.get(QualityComponent.QUALITY.get()) ?: Quality.UNREFINED
         if (heldQuality != Quality.UNREFINED) {
             player.displayClientMessage(
-                Component.literal("Refining is one-shot terminal — that fuel is already refined.")
+                Component.literal("Refining is one-shot terminal — that input is already refined.")
                     .withStyle(ChatFormatting.GRAY),
                 true,
             )
@@ -84,8 +91,7 @@ object RefinerInteraction {
         val isOwner = be.ownerUuid == player.uuid
         val perRefineFee = if (isOwner) 0 else be.feeSpurs
 
-        val before = SkillAttachment.get(player)  // for level snapshot (player ≠ owner case still meaningful)
-        val ownerBefore = ownerSkills
+        val before = SkillAttachment.get(player)
 
         val (breakdown, refined) = doRefineBatch(
             level = level,
@@ -98,7 +104,6 @@ object RefinerInteraction {
         )
         if (refined == 0) return
 
-        // Refining sound — short, low-pitch crackle for tactile feedback.
         level.playSound(
             null,
             pos,
@@ -108,13 +113,10 @@ object RefinerInteraction {
             0.9f + (level.random.nextFloat() - 0.5f) * 0.2f,
         )
 
-        // XP feedback for the refiner-owner is dispatched inside doRefineBatch
-        // via SkillAttachment.grantForestryXp; here we just produce the customer-
-        // facing batch summary.
         if (isOwner) {
             val after = SkillAttachment.get(player)
-            val xpEarned = (after.forestryXp - before.forestryXp).coerceAtLeast(0L)
-            XpFeedback.reportRefineBatch(player, breakdown, xpEarned, before, after)
+            val xpEarned = (after.xpFor(skill) - before.xpFor(skill)).coerceAtLeast(0L)
+            XpFeedback.reportRefineBatch(player, skill, breakdown, xpEarned, before, after)
         } else {
             val tierLabel = breakdownInline(breakdown)
             val coinsLine = if (perRefineFee == 0) "free" else "${perRefineFee * refined} spurs to ${be.ownerName}"
@@ -137,7 +139,7 @@ object RefinerInteraction {
     private fun doRefineBatch(
         level: ServerLevel,
         player: ServerPlayer,
-        be: ForestryRefinerBlockEntity,
+        be: RefinerBlockEntity,
         heldStack: ItemStack,
         batchRequested: Int,
         ownerLevel: Int,
@@ -146,9 +148,7 @@ object RefinerInteraction {
         val breakdown = QualityBreakdown()
         if (batchRequested <= 0) return breakdown to 0
         val outputItem = heldStack.item
-        if (heldStack.isEmpty || (outputItem != Items.CHARCOAL && outputItem != Items.COAL)) {
-            return breakdown to 0
-        }
+        if (heldStack.isEmpty || !heldStack.`is`(tagFor(be.skill))) return breakdown to 0
 
         val ownerUuid = be.ownerUuid
         var refined = 0
@@ -186,13 +186,13 @@ object RefinerInteraction {
             outStack.set(QualityComponent.QUALITY.get(), outputTier)
             giveOrDrop(player, outStack)
 
-            val ash = rollAsh(level, ownerUuid)
+            val ash = rollAsh(level, ownerUuid, be.skill)
             if (ash > 0) {
                 val ashStack = ItemStack(CaeroSpecialization.ASH_ITEM.get(), ash)
                 giveOrDrop(player, ashStack)
             }
 
-            grantOwnerXp(level, ownerUuid)
+            grantOwnerXp(level, ownerUuid, be.skill)
             refined++
         }
 
@@ -204,22 +204,20 @@ object RefinerInteraction {
         val owner = ownerUuid ?: return PlayerSkills()
         val online = level.server.playerList.getPlayer(owner)
         return online?.let { SkillAttachment.get(it) } ?: PlayerSkills()
-        // NOTE: offline owners read as level-1 weights (worst tier distribution) until
-        // they next log in. Future: persist last-known forestry level on the BE.
     }
 
-    private fun grantOwnerXp(level: ServerLevel, ownerUuid: UUID?) {
+    private fun grantOwnerXp(level: ServerLevel, ownerUuid: UUID?, skill: SkillKind) {
         val xp = CaeroSpecializationConfig.XP_PER_REFINE.get().toLong()
         val owner = ownerUuid ?: return
         val online = level.server.playerList.getPlayer(owner)
         if (online != null) {
-            SkillAttachment.grantForestryXp(online, xp)
+            SkillAttachment.grantXp(online, skill, xp)
         } else {
-            PendingXpStore.get(level).addForestryXp(owner, xp)
+            PendingXpStore.get(level).addXp(skill, owner, xp)
         }
     }
 
-    private fun creditOwner(be: ForestryRefinerBlockEntity, ownerUuid: UUID?, amount: Int) {
+    private fun creditOwner(be: RefinerBlockEntity, ownerUuid: UUID?, amount: Int) {
         if (amount <= 0) return
         if (ownerUuid != null) {
             val account = Numismatics.BANK.getAccount(ownerUuid)
@@ -231,10 +229,12 @@ object RefinerInteraction {
         be.depositCoffer(amount)
     }
 
-    private fun rollAsh(level: ServerLevel, ownerUuid: UUID?): Int {
+    private fun rollAsh(level: ServerLevel, ownerUuid: UUID?, skill: SkillKind): Int {
+        // Ash byproduct only for forestry — mining doesn't produce ash.
+        if (skill != SkillKind.FORESTRY) return 0
         val ownerLevel = ownerUuid
             ?.let { level.server.playerList.getPlayer(it) }
-            ?.let { SkillAttachment.get(it).forestryLevel }
+            ?.let { SkillAttachment.get(it).levelFor(skill) }
             ?: 1
         val capped = ownerLevel.coerceAtMost(CaeroSpecializationConfig.ASH_BONUS_LEVEL_CAP.get())
         val rate = CaeroSpecializationConfig.ASH_BASE_RATE.get() +
@@ -248,18 +248,18 @@ object RefinerInteraction {
         }
     }
 
-    private fun sendInfo(player: ServerPlayer, be: ForestryRefinerBlockEntity, ownerLevel: Int) {
+    private fun sendInfo(player: ServerPlayer, be: RefinerBlockEntity, ownerLevel: Int) {
         val owner = be.ownerUuid
         val ownerLine = if (owner == null) "(unowned)" else be.ownerName
         val isOwner = owner == player.uuid
         val mySkills = SkillAttachment.get(player)
-        val toNext = SkillMath.xpToNextLevel(mySkills.forestryXp)
+        val toNext = SkillMath.xpToNextLevel(mySkills.xpFor(be.skill))
         val parts = mutableListOf(
-            Component.literal("Forestry refiner — owner: ").withStyle(ChatFormatting.GOLD)
+            Component.literal("${be.skill.displayName} refiner — owner: ").withStyle(ChatFormatting.GOLD)
                 .append(Component.literal(ownerLine).withStyle(ChatFormatting.AQUA)),
-            Component.literal("Owner forestry level: $ownerLevel").withStyle(ChatFormatting.GRAY),
+            Component.literal("Owner ${be.skill.id} level: $ownerLevel").withStyle(ChatFormatting.GRAY),
             Component.literal("Fee: ${be.feeSpurs} spurs/refine").withStyle(ChatFormatting.GRAY),
-            Component.literal("Your forestry: lvl ${mySkills.forestryLevel} · $toNext XP to next")
+            Component.literal("Your ${be.skill.id}: lvl ${mySkills.levelFor(be.skill)} · $toNext XP to next")
                 .withStyle(ChatFormatting.DARK_AQUA),
         )
         if (isOwner) {
@@ -271,18 +271,13 @@ object RefinerInteraction {
         for (line in parts) player.displayClientMessage(line, false)
     }
 
-    /**
-     * Owner-side fee picker. Sneak + right-click with an empty hand on your own
-     * refiner emits a chat menu of clickable preset prices (1 / 5 / 10 / 25 / 50 /
-     * 100 / 250 spurs) plus a "custom…" option that pre-fills the slash command.
-     * All prices are in Numismatics spurs.
-     */
-    private fun sendFeeChooser(player: ServerPlayer, be: ForestryRefinerBlockEntity, pos: BlockPos) {
+    private fun sendFeeChooser(player: ServerPlayer, be: RefinerBlockEntity, pos: BlockPos) {
         val cap = CaeroSpecializationConfig.MAX_REFINER_FEE.get()
         val presets = intArrayOf(1, 5, 10, 25, 50, 100, 250).filter { it <= cap }
 
         val header = Component.empty()
-            .append(Component.literal("⚙ Set refiner fee").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+            .append(Component.literal("⚙ Set ${be.skill.id} refiner fee")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
             .append(Component.literal("  current: ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal("${be.feeSpurs} spurs/refine").withStyle(ChatFormatting.AQUA))
         player.sendSystemMessage(header)

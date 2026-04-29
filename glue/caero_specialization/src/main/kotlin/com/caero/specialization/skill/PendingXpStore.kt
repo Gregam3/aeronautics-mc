@@ -4,34 +4,39 @@ import net.minecraft.core.HolderLookup
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.saveddata.SavedData
+import java.util.EnumMap
 import java.util.UUID
 
 /**
- * Server-side store of XP earned while the recipient was offline.
- * Drained into the player's [PlayerSkills] attachment on next login.
+ * Server-side store of XP earned while the recipient was offline, drained on
+ * next login by [SkillLoginListener].
  */
 class PendingXpStore : SavedData() {
 
-    private val pendingForestry: MutableMap<UUID, Long> = HashMap()
+    private val pending: EnumMap<SkillKind, MutableMap<UUID, Long>> =
+        EnumMap<SkillKind, MutableMap<UUID, Long>>(SkillKind::class.java).also { map ->
+            for (k in SkillKind.values()) map[k] = HashMap()
+        }
 
-    fun addForestryXp(player: UUID, amount: Long) {
+    fun addXp(kind: SkillKind, player: UUID, amount: Long) {
         if (amount <= 0L) return
-        pendingForestry.merge(player, amount, Long::plus)
+        pending.getValue(kind).merge(player, amount, Long::plus)
         setDirty()
     }
 
-    fun drainForestryXp(player: UUID): Long {
-        val v = pendingForestry.remove(player) ?: return 0L
+    fun drainXp(kind: SkillKind, player: UUID): Long {
+        val v = pending.getValue(kind).remove(player) ?: return 0L
         if (v != 0L) setDirty()
         return v
     }
 
     override fun save(tag: CompoundTag, registries: HolderLookup.Provider): CompoundTag {
-        val sub = CompoundTag()
-        for ((uuid, xp) in pendingForestry) {
-            sub.putLong(uuid.toString(), xp)
+        for ((kind, map) in pending) {
+            if (map.isEmpty()) continue
+            val sub = CompoundTag()
+            for ((uuid, xp) in map) sub.putLong(uuid.toString(), xp)
+            tag.put(legacyTagKey(kind), sub)
         }
-        tag.put("PendingForestry", sub)
         return tag
     }
 
@@ -43,12 +48,20 @@ class PendingXpStore : SavedData() {
             return level.server.overworld().dataStorage.computeIfAbsent(factory, SAVED_DATA_KEY)
         }
 
+        // v1.1 used "PendingForestry"; new entries use "Pending<Capitalized>".
+        private fun legacyTagKey(kind: SkillKind): String = when (kind) {
+            SkillKind.FORESTRY -> "PendingForestry"
+            SkillKind.MINING -> "PendingMining"
+        }
+
         private fun load(tag: CompoundTag, registries: HolderLookup.Provider): PendingXpStore {
             val store = PendingXpStore()
-            val sub = tag.getCompound("PendingForestry")
-            for (key in sub.allKeys) {
-                val uuid = runCatching { UUID.fromString(key) }.getOrNull() ?: continue
-                store.pendingForestry[uuid] = sub.getLong(key)
+            for (kind in SkillKind.values()) {
+                val sub = tag.getCompound(legacyTagKey(kind))
+                for (key in sub.allKeys) {
+                    val uuid = runCatching { UUID.fromString(key) }.getOrNull() ?: continue
+                    store.pending.getValue(kind)[uuid] = sub.getLong(key)
+                }
             }
             return store
         }

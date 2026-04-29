@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "CIC",
+    "CCC"
+  ],
+  "key": {
+    "C": { "item": "minecraft:cobblestone" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "id": "caero_specialization:mining_refiner",
+    "count": 1
+  }
+}

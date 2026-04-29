@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "create:item/raw_zinc",
+    "layer1": "caero_specialization:item/quality_border_medium"
+  }
+}

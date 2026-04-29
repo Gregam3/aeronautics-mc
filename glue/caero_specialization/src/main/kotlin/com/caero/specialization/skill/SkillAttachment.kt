@@ -9,10 +9,6 @@ import net.neoforged.neoforge.registries.DeferredRegister
 import net.neoforged.neoforge.registries.NeoForgeRegistries
 import java.util.function.Supplier
 
-/**
- * Persistent player-attached skill bag. Survives logout/login, dimension swaps,
- * and (per [AttachmentType.Builder.copyOnDeath]) death.
- */
 object SkillAttachment {
 
     val ATTACHMENTS: DeferredRegister<AttachmentType<*>> =
@@ -36,18 +32,14 @@ object SkillAttachment {
         player.setData(SKILLS.get(), skills)
     }
 
-    /**
-     * Grants [amount] XP to [player] and emits live UI feedback (action-bar XP bar
-     * + chat / sound on level up). Caller is responsible for persistence — that's
-     * automatic via the attachment.
-     */
-    fun grantForestryXp(player: Player, amount: Long) {
+    /** Awards XP for [kind] and emits live UI feedback (action-bar / chat / sound). */
+    fun grantXp(player: Player, kind: SkillKind, amount: Long) {
         if (amount <= 0L) return
         val before = get(player)
-        val updated = before.grantForestryXp(amount)
+        val updated = before.grantXp(kind, amount)
         set(player, updated)
         if (player is ServerPlayer) {
-            XpFeedback.onForestryXpGain(player, before, updated, amount)
+            XpFeedback.onXpGain(player, kind, before, updated)
         }
     }
 }
