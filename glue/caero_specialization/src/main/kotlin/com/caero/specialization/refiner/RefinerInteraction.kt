@@ -21,6 +21,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.core.component.DataComponents
 import net.minecraft.tags.TagKey
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
@@ -42,10 +43,13 @@ object RefinerInteraction {
         TagKey.create(net.minecraft.core.registries.Registries.ITEM, CaeroSpecialization.id("refinable_forestry"))
     val REFINABLE_MINING: TagKey<Item> =
         TagKey.create(net.minecraft.core.registries.Registries.ITEM, CaeroSpecialization.id("refinable_mining"))
+    val REFINABLE_ARMOURER: TagKey<Item> =
+        TagKey.create(net.minecraft.core.registries.Registries.ITEM, CaeroSpecialization.id("refinable_armourer"))
 
     private fun tagFor(kind: SkillKind): TagKey<Item> = when (kind) {
         SkillKind.FORESTRY -> REFINABLE_FORESTRY
         SkillKind.MINING -> REFINABLE_MINING
+        SkillKind.ARMOURER -> REFINABLE_ARMOURER
     }
 
     @SubscribeEvent
@@ -177,13 +181,16 @@ object RefinerInteraction {
                 creditOwner(be, ownerUuid, perRefineFee)
             }
 
+            // Copy first (preserves NBT-rich data on tools / armour: enchantments,
+            // damage value, custom name) then shrink the input.
+            val outStack = heldStack.copyWithCount(1)
             heldStack.shrink(1)
 
             val outputTier = SkillMath.rollOutputQuality(ownerLevel, level.random)
             breakdown.increment(outputTier)
 
-            val outStack = ItemStack(outputItem, 1)
             outStack.set(QualityComponent.QUALITY.get(), outputTier)
+            applyDurabilityScaling(outStack, be.skill, outputTier)
             giveOrDrop(player, outStack)
 
             val ash = rollAsh(level, ownerUuid, be.skill)
@@ -227,6 +234,29 @@ object RefinerInteraction {
             }
         }
         be.depositCoffer(amount)
+    }
+
+    /**
+     * Refining an armourer item (tool / sword / armour) scales its `MAX_DAMAGE`
+     * data component by the rolled tier. Vanilla `Item.getMaxDamage(stack)`
+     * reads from this component, so no mixin is required — the per-stack
+     * override sticks for the lifetime of the item.
+     *
+     * Damage value is scaled proportionally so the player keeps the same
+     * percentage of remaining durability across the refine.
+     */
+    private fun applyDurabilityScaling(stack: ItemStack, skill: SkillKind, tier: Quality) {
+        if (skill != SkillKind.ARMOURER) return
+        val baseMax = stack.get(DataComponents.MAX_DAMAGE) ?: return
+        if (baseMax <= 0) return
+        val mul = QualityScaling.durabilityMultiplier(tier)
+        val newMax = (baseMax * mul).toInt().coerceAtLeast(1)
+        stack.set(DataComponents.MAX_DAMAGE, newMax)
+        val oldDamage = stack.get(DataComponents.DAMAGE) ?: 0
+        if (oldDamage > 0) {
+            val newDamage = (oldDamage * mul).toInt().coerceIn(0, newMax - 1)
+            stack.set(DataComponents.DAMAGE, newDamage)
+        }
     }
 
     private fun rollAsh(level: ServerLevel, ownerUuid: UUID?, skill: SkillKind): Int {

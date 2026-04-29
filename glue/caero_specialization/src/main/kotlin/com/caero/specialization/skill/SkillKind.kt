@@ -10,7 +10,8 @@ enum class SkillKind(
     val displayName: String,
 ) {
     FORESTRY("forestry", "Forestry"),
-    MINING("mining", "Mining");
+    MINING("mining", "Mining"),
+    ARMOURER("armourer", "Armourer");
 
     companion object {
         fun fromId(id: String): SkillKind? = values().firstOrNull { it.id == id }

@@ -84,6 +84,7 @@ class RefinerBlockEntity(
         private fun typeFor(skill: SkillKind): BlockEntityType<RefinerBlockEntity> = when (skill) {
             SkillKind.FORESTRY -> CaeroSpecialization.FORESTRY_REFINER_BE_TYPE.get()
             SkillKind.MINING -> CaeroSpecialization.MINING_REFINER_BE_TYPE.get()
+            SkillKind.ARMOURER -> CaeroSpecialization.ARMOURER_REFINER_BE_TYPE.get()
         }
     }
 }

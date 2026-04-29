@@ -8,6 +8,8 @@ import com.caero.specialization.quality.Quality
 import com.caero.specialization.quality.QualityComponent
 import com.caero.specialization.quality.QualityTooltip
 import com.caero.specialization.recipe.QualitySmeltingRecipe
+import com.caero.specialization.refiner.AttributeQualityScaler
+import com.caero.specialization.refiner.DurabilityNerfTicker
 import com.caero.specialization.refiner.RefinerBlock
 import com.caero.specialization.refiner.RefinerBlockEntity
 import com.caero.specialization.refiner.RefinerInteraction
@@ -67,12 +69,19 @@ object CaeroSpecialization {
         { props -> RefinerBlock(props, SkillKind.MINING) },
         refinerBlockProps,
     )
+    val ARMOURER_REFINER = BLOCKS.registerBlock("armourer_refiner",
+        { props -> RefinerBlock(props, SkillKind.ARMOURER) },
+        refinerBlockProps,
+    )
 
     val FORESTRY_REFINER_ITEM = ITEMS.registerItem("forestry_refiner") { props ->
         BlockItem(FORESTRY_REFINER.get(), props)
     }
     val MINING_REFINER_ITEM = ITEMS.registerItem("mining_refiner") { props ->
         BlockItem(MINING_REFINER.get(), props)
+    }
+    val ARMOURER_REFINER_ITEM = ITEMS.registerItem("armourer_refiner") { props ->
+        BlockItem(ARMOURER_REFINER.get(), props)
     }
 
     val ASH_ITEM = ITEMS.registerItem("ash") { props -> AshItem(props) }
@@ -93,6 +102,14 @@ object CaeroSpecialization {
                 MINING_REFINER.get(),
             ).build(null)
         }
+    val ARMOURER_REFINER_BE_TYPE: DeferredHolder<BlockEntityType<*>, BlockEntityType<RefinerBlockEntity>> =
+        BLOCK_ENTITY_TYPES.register("armourer_refiner") { ->
+            @Suppress("DEPRECATION")
+            BlockEntityType.Builder.of(
+                { pos, state -> RefinerBlockEntity(pos, state, SkillKind.ARMOURER) },
+                ARMOURER_REFINER.get(),
+            ).build(null)
+        }
 
     val QUALITY_SMELTING_SERIALIZER: DeferredHolder<RecipeSerializer<*>, QualitySmeltingRecipe.Serializer> =
         RECIPE_SERIALIZERS.register("quality_smelting") { -> QualitySmeltingRecipe.Serializer }
@@ -105,6 +122,7 @@ object CaeroSpecialization {
             .displayItems { _, output ->
                 output.accept(FORESTRY_REFINER_ITEM.get())
                 output.accept(MINING_REFINER_ITEM.get())
+                output.accept(ARMOURER_REFINER_ITEM.get())
                 output.accept(ASH_ITEM.get())
                 val sampleBases = arrayOf(
                     Items.CHARCOAL, Items.COAL,
@@ -143,6 +161,8 @@ object CaeroSpecialization {
         NeoForge.EVENT_BUS.register(FuelBurnTime)
         NeoForge.EVENT_BUS.register(QualityTooltip)
         NeoForge.EVENT_BUS.register(RefinerInteraction)
+        NeoForge.EVENT_BUS.register(AttributeQualityScaler)
+        NeoForge.EVENT_BUS.register(DurabilityNerfTicker)
         NeoForge.EVENT_BUS.register(SkillLoginListener)
         NeoForge.EVENT_BUS.addListener(::onRegisterCommands)
     }

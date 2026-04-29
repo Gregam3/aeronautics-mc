@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "caero_specialization:forestry_refiner",
-    "caero_specialization:mining_refiner"
+    "caero_specialization:mining_refiner",
+    "caero_specialization:armourer_refiner"
   ]
 }

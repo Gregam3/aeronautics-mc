@@ -52,6 +52,7 @@ class PendingXpStore : SavedData() {
         private fun legacyTagKey(kind: SkillKind): String = when (kind) {
             SkillKind.FORESTRY -> "PendingForestry"
             SkillKind.MINING -> "PendingMining"
+            SkillKind.ARMOURER -> "PendingArmourer"
         }
 
         private fun load(tag: CompoundTag, registries: HolderLookup.Provider): PendingXpStore {

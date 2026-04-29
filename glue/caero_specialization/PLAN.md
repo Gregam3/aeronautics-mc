@@ -650,6 +650,15 @@ want to test in-game, no batching.
   (forestry + mining); the same code path drives both. Diamonds excluded
   per Greg. See §17 for the v1.2 deltas.
 
+- **2026-04-29 v1.3 — shipped** — Armourer industry added. Quality now
+  applies to swords (75 / 90 / 110 / 130 % attack damage), armour
+  (60 / 80 / 110 / 140 % `ARMOR` + `ARMOR_TOUGHNESS`) and tool
+  durability (60 / 80 / 110 / 140 %). Implemented via NeoForge's
+  `ItemAttributeModifierEvent` (sword + armour) and a per-stack
+  `MAX_DAMAGE` data-component override (durability, set at the moment
+  of refining). Third refiner block (`armourer_refiner`) registered.
+  See §18 for the v1.3 deltas.
+
 ---
 
 ## 16. As-shipped (v1.1) — supersedes earlier sections where they conflict
@@ -858,3 +867,109 @@ redstone / emerald / nether quartz refining in v1.2. See `TEXTURES_TODO.md`
 a vanilla / placeholder texture. Both refiners are visually placeholder
 (forestry: smooth_stone + stripped_oak_log front; mining: cobblestone +
 iron_ore front). Quality borders are PIL-generated 1 px frames.
+
+---
+
+## 18. v1.3 deltas — armourer industry
+
+Builds on v1.2. Adds `ARMOURER` as a third `SkillKind`; the existing
+parameterised refiner block + entity scale gracefully.
+
+### 18.1 New refiner
+
+`caero_specialization:armourer_refiner` — third RefinerBlock instance.
+Recipe: 8 × cobblestone ringing 1 × `minecraft:iron_sword`. Visually
+placeholder (cobblestone with `block/anvil` on the front face — see
+TEXTURES_TODO.md).
+
+### 18.2 Refinable armourer items
+
+`#caero_specialization:refinable_armourer` enumerates every vanilla
+sword (5 metal tiers + wooden/stone/golden/diamond/netherite), pickaxe /
+axe / shovel / hoe in the same tier set, every armour piece across
+leather / chainmail / iron / golden / diamond / netherite, plus the
+turtle helmet. Greg's "diamonds excluded" guidance from v1.2 was about
+*ore* diamonds — diamond *equipment* is included since it's the standard
+armour-tier endgame.
+
+Modded armour / tools (Iron's Spells, Born in Chaos, etc.) are **not**
+yet in the tag. Adding them is mechanical: append item IDs to the JSON.
+
+### 18.3 Effectiveness multipliers (locked numbers, Greg 2026-04-29)
+
+| Tier | Sword damage (`ATTACK_DAMAGE`) | Armour (`ARMOR`+`ARMOR_TOUGHNESS`) | Tool durability (`MAX_DAMAGE`) |
+|---|---|---|---|
+| UNREFINED | 75 % | 60 % | (unchanged — see 18.5) |
+| LOW | 90 % | 80 % | 80 % |
+| MEDIUM | 110 % | 110 % | 110 % |
+| HIGH | 130 % | 140 % | 140 % |
+
+Living in `com.caero.specialization.refiner.QualityScaling`. Tunable in
+one place if Greg wants to iterate.
+
+### 18.4 Implementation
+
+**Sword + armour scaling** — `AttributeQualityScaler` listens to
+`ItemAttributeModifierEvent`. For any stack in the armourer tag, finds
+existing `ATTACK_DAMAGE` / `ARMOR` / `ARMOR_TOUGHNESS` modifiers, and
+replaces each with a scaled-amount modifier of the same id and slot.
+Only `ADD_VALUE` operations are scaled — multiplicative ops are left
+alone since they compound with other modifiers and would over-stack.
+
+The event fires for *every* lookup including stacks with no quality
+component, so vanilla un-refined armour automatically picks up the
+60 % nerf — Greg's intended global change.
+
+**Tool durability** — applied at the moment of refining as a per-stack
+override of `DataComponents.MAX_DAMAGE`. NeoForge's `IItemExtension.getMaxDamage(stack)`
+reads from this component, so the override sticks for the lifetime of
+the tool. Damage value (`DataComponents.DAMAGE`) is scaled
+proportionally so the player keeps their remaining-durability ratio
+across the refine.
+
+**Component preservation on refine** — the refining flow now uses
+`heldStack.copyWithCount(1)` to preserve enchantments, custom names,
+existing damage, etc. Charcoal and raw ores have no NBT-rich data so
+this is a no-op for forestry/mining; for armourer items it carries
+across an enchanted sword's "Sharpness V" untouched.
+
+### 18.5 UNREFINED tool durability
+
+Vanilla iron pickaxe (no quality component) is now nerfed to 60 % = 150
+durability via [`DurabilityNerfTicker`][nerf-ticker]: a once-per-second
+sweep over each player's inventory that brings every armourer-tag item's
+`MAX_DAMAGE` in line with `baseMax × durabilityMultiplier(quality)`.
+
+The sweep is idempotent because we always read the *registry-default*
+base from `item.components()` and not the per-stack override — so
+`expectedMax` is stable across repeated runs.
+
+When the multiplier shrinks `MAX_DAMAGE`, the existing damage value is
+rescaled proportionally so the player keeps the same percentage of
+remaining durability across the change.
+
+Sword and armour multipliers also apply globally because the attribute
+event fires on every lookup. So Greg's "vanilla nerf" intent now lands
+uniformly across offence, defence, and durability.
+
+Edge cases:
+
+- **Items in chests / dispensers / item entities** are not swept. They
+  pick up the right `MAX_DAMAGE` the first second after a player picks
+  them up. Acceptable — durability is only consulted while equipped.
+- **Mob-held tools / armour** are not swept (no PlayerTickEvent fires).
+  Their attribute scaling still applies via the modifier event, but
+  durability stays vanilla. This is fine because mob equipment damage
+  isn't player-relevant.
+- **Unbreakable creative items** (`UNBREAKABLE` component) are skipped.
+
+[nerf-ticker]: src/main/kotlin/com/caero/specialization/refiner/DurabilityNerfTicker.kt
+
+### 18.6 Quality icons on armourer items
+
+**Deferred.** Each tool/armour piece has a unique 16×16 sprite, so
+shipping border overlays would mean ~5 weapon × 4 armour × 6 metal
+tiers + 5 tool types × 6 metals = ~150 model-override JSON files. Not
+worth doing by hand for placeholder borders — TEXTURES_TODO.md tracks
+this. Tooltip text continues to display quality on every armourer item
+(tag-driven).

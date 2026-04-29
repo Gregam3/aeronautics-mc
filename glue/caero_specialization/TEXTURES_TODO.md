@@ -14,6 +14,7 @@ All sprites are 16×16 unless noted. Save under
 |---|---|---|---|
 | Forestry refiner — sides + top + bottom | `block/forestry_refiner_side.png` (×6) | `minecraft:block/smooth_stone`, `minecraft:block/stripped_oak_log` (north face) | Industrial wood-shop look. The "log in the middle" recipe should read visually — front face has a clear log-stub motif. |
 | Mining refiner — sides + top + bottom | `block/mining_refiner_side.png` (×6) | `minecraft:block/cobblestone`, `minecraft:block/iron_ore` (north face) | Mining-shop look. Front face should imply ore inside. Distinguishable from Forestry refiner at a glance. |
+| Armourer refiner — sides + top + bottom | `block/armourer_refiner_side.png` (×6) | `minecraft:block/cobblestone`, `minecraft:block/anvil` (north face) | Smithy / armoury look. Front face should evoke an anvil or sword rack so it reads distinctly from the Mining refiner (also cobblestone-based). |
 | (Future) Cooking refiner | `block/cooking_refiner_*.png` | n/a | Stretch — for v2 cooking industry. |
 | (Future) Brewing refiner | `block/brewing_refiner_*.png` | n/a | Stretch — for v2 brewing industry. |
 
