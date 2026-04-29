@@ -1,0 +1,47 @@
+modLoader="kotlinforforge"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Per-player industry skill ladder + per-stack item quality + an owner-bound refiner
+block that binds them. v1 ships fuel only: charcoal carries a quality data component
+that scales its furnace burn-time (UNREFINED 400t / LOW 800t / MEDIUM 1600t / HIGH 3200t).
+A refiner block, owned by the placer, takes payment in Numismatics spurs from customers
+and grants the owner XP and a deterministic output tier (level 0–19 → LOW; 20–49 →
+MEDIUM; 50+ → HIGH). Vanilla coal generation is removed; charcoal is the sole fuel.
+
+See glue/caero_specialization/PLAN.md for design rationale.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5.9.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="numismatics"
+    type="required"
+    versionRange="[1.0.20,)"
+    ordering="AFTER"
+    side="BOTH"

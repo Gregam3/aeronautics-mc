@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "minecraft:block/smooth_stone",
+    "down":     "minecraft:block/smooth_stone",
+    "up":       "minecraft:block/smooth_stone",
+    "north":    "minecraft:block/stripped_oak_log",
+    "south":    "minecraft:block/smooth_stone",
+    "east":     "minecraft:block/smooth_stone",
+    "west":     "minecraft:block/smooth_stone"
+  }
+}
