@@ -36,9 +36,37 @@ object BiomeEntryHandler {
     private val TIER_MEDIUM = biomeTag("tier_medium")
     private val TIER_HARD = biomeTag("tier_hard")
 
+    // Display-only tier for oceans. Kept *out* of the tier_* tags on purpose —
+    // those tags drive worldgen substitution (VoronoiTieredBiomeSource), so
+    // tagging oceans there would let the substituter swap an ocean rolled by
+    // Tectonic for a land biome of the wanted ring tier, wrecking the natural
+    // ocean/continent layout. This map is consulted only in tierComponent for
+    // the action bar label.
+    private val OCEAN_TIERS: Map<ResourceLocation, Pair<String, ChatFormatting>> = mapOf(
+        rl("minecraft", "ocean")                      to ("Easy"   to ChatFormatting.GREEN),
+        rl("minecraft", "warm_ocean")                 to ("Easy"   to ChatFormatting.GREEN),
+        rl("minecraft", "lukewarm_ocean")             to ("Easy"   to ChatFormatting.GREEN),
+        rl("regions_unexplored", "rocky_reef")        to ("Easy"   to ChatFormatting.GREEN),
+        rl("minecraft", "cold_ocean")                 to ("Medium" to ChatFormatting.GOLD),
+        rl("minecraft", "deep_ocean")                 to ("Medium" to ChatFormatting.GOLD),
+        rl("minecraft", "deep_lukewarm_ocean")        to ("Medium" to ChatFormatting.GOLD),
+        rl("regions_unexplored", "hyacinth_deeps")    to ("Medium" to ChatFormatting.GOLD),
+        rl("minecraft", "deep_cold_ocean")            to ("Hard"   to ChatFormatting.RED),
+        rl("minecraft", "frozen_ocean")               to ("Hard"   to ChatFormatting.RED),
+        rl("minecraft", "deep_frozen_ocean")          to ("Hard"   to ChatFormatting.RED),
+    )
+
+    private fun rl(ns: String, path: String): ResourceLocation =
+        ResourceLocation.fromNamespaceAndPath(ns, path)
+
     private const val CHECK_INTERVAL_TICKS = 10
 
-    private data class Last(val biome: ResourceLocation?, val tick: Int, val stableCount: Int = 0)
+    private data class Last(
+        val biome: ResourceLocation?,
+        val claimOwner: UUID?,
+        val tick: Int,
+        val stableCount: Int = 0,
+    )
 
     private val lastSeen: MutableMap<UUID, Last> = HashMap()
 
@@ -61,19 +89,19 @@ object BiomeEntryHandler {
 
         val holder: Holder<Biome> = player.level().getBiome(player.blockPosition())
         val current: ResourceLocation = holder.unwrapKey().map { it.location() }.orElse(null) ?: return
+        val currentOwner: UUID? = ClaimOwnerLookup.ownerUuidAt(player)
 
-        if (prev?.biome == current) {
-            lastSeen[player.uuid] = Last(current, tick, (prev.stableCount + 1).coerceAtMost(STABLE_THRESHOLD + 1))
+        if (prev?.biome == current && prev.claimOwner == currentOwner) {
+            lastSeen[player.uuid] = Last(current, currentOwner, tick, (prev.stableCount + 1).coerceAtMost(STABLE_THRESHOLD + 1))
             return
         }
 
-        // Biome changed — reset stability counter
-        val newStable = 1
-        lastSeen[player.uuid] = Last(current, tick, newStable)
+        // Biome or claim changed — reset stability counter
+        lastSeen[player.uuid] = Last(current, currentOwner, tick, 1)
 
         if (prev == null) return
 
-        // Only show label if the previous biome was stable (not flickering)
+        // Only show label if the previous state was stable (not flickering)
         if (prev.stableCount >= STABLE_THRESHOLD) {
             sendBiomeEntry(player, holder, current)
         }
@@ -84,9 +112,12 @@ object BiomeEntryHandler {
         // Component.translatable. Terralith (and most worldgen datapacks) ship
         // no client-side lang file, so `biome.terralith.blooming_valley` would
         // render as the raw key. Path-derived names always render correctly.
+        val sep = Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY)
         val line = Component.literal(prettify(key.path))
-            .append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(sep)
             .append(tierComponent(player, holder, key))
+            .append(sep)
+            .append(ClaimOwnerLookup.ownerComponent(player))
 
         // Action bar: single-line, above the hotbar, small font, auto-fades.
         // Chosen over title/subtitle because the title font is too large for
@@ -95,14 +126,16 @@ object BiomeEntryHandler {
     }
 
     private fun tierComponent(player: ServerPlayer, holder: Holder<Biome>, key: ResourceLocation): Component {
+        val ocean = OCEAN_TIERS[key]
         val (label, colour) = when {
+            ocean != null -> ocean
             holder.`is`(TIER_EASY) -> "Easy" to ChatFormatting.GREEN
             holder.`is`(TIER_MEDIUM) -> "Medium" to ChatFormatting.GOLD
             holder.`is`(TIER_HARD) -> "Hard" to ChatFormatting.RED
             else -> {
-                // Oceans, rivers, beaches, caves — not in any tier tag so they
-                // pass through substitution untouched. For display, derive tier
-                // from distance to origin (same logic as the biome source floors).
+                // Rivers, beaches, caves, anything still untagged — fall back to
+                // distance from origin. (Oceans handled above so they don't flip
+                // tier as the player moves through the rings.)
                 if (loggedUntieredBiomes.add(key)) {
                     LOGGER.info("caero_rings: biome '{}' not in tier tag, using distance-based tier for display", key)
                 }
