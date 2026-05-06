@@ -6,12 +6,17 @@ import com.caero.rings.WaterDiscount;
 import dev.ryanhcode.sable.api.physics.mass.MergedMassTracker;
 import dev.ryanhcode.sable.mixinterface.entity.entity_sublevel_collision.EntityMovementExtension;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import dev.simulated_team.simulated.content.blocks.rope.strand.server.RopeAttachment;
+import dev.simulated_team.simulated.content.blocks.rope.strand.server.ServerLevelRopeManager;
+import dev.simulated_team.simulated.content.blocks.rope.strand.server.ServerRopeStrand;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.UUID;
 
 /**
  * Adds player inventory weight to the contraption's merged mass and applies a
@@ -42,13 +47,39 @@ public abstract class MergedMassTrackerMixin {
 
         double chestBonus = ChestMassTicker.totalBonusFor(subLevel.getUniqueId());
 
+        // Towed sub-levels (hanging via rope/winch): their chest content mass is NOT
+        // in this.mass, so we add the full amount. Walk every rope strand and collect
+        // the ChestMassTicker bonus for any sub-level attached to us via rope.
+        double towedChestBonus = 0.0;
+        UUID myId = subLevel.getUniqueId();
+        if (myId != null) {
+            ServerLevelRopeManager ropeManager = ServerLevelRopeManager.getOrCreate(subLevel.getLevel());
+            for (ServerRopeStrand strand : ropeManager.getAllStrands()) {
+                boolean connectedToMe = false;
+                UUID otherUUID = null;
+                for (RopeAttachment attachment : strand.getAttachments()) {
+                    UUID id = attachment.subLevelID();
+                    if (myId.equals(id)) {
+                        connectedToMe = true;
+                    } else if (id != null) {
+                        otherUUID = id;
+                    }
+                }
+                if (connectedToMe && otherUUID != null) {
+                    towedChestBonus += ChestMassTicker.totalBonusFor(otherUUID);
+                }
+            }
+        }
+
         // Chest bonus is already in this.mass (baked at assembly + delta-updated by
         // ChestMassTicker). Apply only the discount delta on top.
         double chestAdjust = chestBonus * (waterMul - 1.0);
         // Player bonus is fresh each tick — apply with discount.
         double playerAdjust = playerBonus * waterMul;
+        // Towed chest bonus is NOT in this.mass — add the full value with discount.
+        double towedChestAdjust = towedChestBonus * waterMul;
 
-        double delta = chestAdjust + playerAdjust;
+        double delta = chestAdjust + playerAdjust + towedChestAdjust;
         if (delta == 0.0) return;
 
         // Safety: never let our adjustment cross zero. isInvalid() returns true
