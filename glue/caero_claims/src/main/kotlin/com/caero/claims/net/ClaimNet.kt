@@ -4,7 +4,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 
 object ClaimNet {
     /** Bump when payload schema changes. NeoForge enforces match between client and server. */
-    private const val VERSION = "2"
+    private const val VERSION = "3"
 
     fun register(event: RegisterPayloadHandlersEvent) {
         val r = event.registrar(VERSION)

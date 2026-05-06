@@ -1,7 +1,6 @@
 package com.caero.specialization.refiner
 
-import com.caero.specialization.quality.Quality
-import com.caero.specialization.quality.QualityComponent
+import com.caero.specialization.quality.QualityScore
 import net.minecraft.core.Holder
 import net.minecraft.world.entity.ai.attributes.Attribute
 import net.minecraft.world.entity.ai.attributes.AttributeModifier
@@ -36,10 +35,13 @@ object AttributeQualityScaler {
         val stack = event.itemStack
         if (!stack.`is`(RefinerInteraction.REFINABLE_ARMOURER)) return
 
-        val quality = stack.get(QualityComponent.QUALITY.get()) ?: Quality.UNREFINED
-        val swordMul = QualityScaling.swordDamageMultiplier(quality)
-        val armourMul = QualityScaling.armourMultiplier(quality)
-        if (swordMul == 1.0 && armourMul == 1.0) return
+        // Continuous 0–100 score with one curve for combat (sword damage,
+        // armour, armour toughness). Legacy enum-only gear is snapped via
+        // [QualityScore.effective]; unstamped vanilla gear reads as q=0
+        // and gets the full UNREFINED nerf.
+        val score = QualityScore.effective(stack)
+        val combatMul = QualityScore.combatMultiplier(score)
+        if (combatMul == 1.0) return
 
         val toReplace = mutableListOf<ItemAttributeModifiers.Entry>()
         for (entry in event.modifiers.toList()) {
@@ -49,8 +51,6 @@ object AttributeQualityScaler {
             }
         }
         for (entry in toReplace) {
-            val key = entry.attribute.unwrapKey().get().location()
-            val mul = if (key in SCALABLE_DAMAGE_ATTRS) swordMul else armourMul
             val original = entry.modifier
             // ADDITION operations are the typical case for sword/armour modifiers.
             // Only scale ADDITION/ADD_VALUE — leave multiplier ops alone since they
@@ -60,7 +60,7 @@ object AttributeQualityScaler {
 
             val scaled = AttributeModifier(
                 original.id(),
-                original.amount() * mul,
+                original.amount() * combatMul,
                 op,
             )
             event.removeModifier(entry.attribute as Holder<Attribute>, original.id())

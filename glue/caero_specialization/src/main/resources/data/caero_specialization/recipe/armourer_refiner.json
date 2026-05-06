@@ -1,4 +1,9 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:false"
+    }
+  ],
   "type": "minecraft:crafting_shaped",
   "pattern": [
     "CCC",
@@ -6,8 +11,12 @@
     "CCC"
   ],
   "key": {
-    "C": { "item": "minecraft:cobblestone" },
-    "S": { "item": "minecraft:iron_sword" }
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "S": {
+      "item": "minecraft:iron_sword"
+    }
   },
   "result": {
     "id": "caero_specialization:armourer_refiner",

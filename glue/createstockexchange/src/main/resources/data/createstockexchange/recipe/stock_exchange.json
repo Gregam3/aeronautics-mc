@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GGG",
+    "GEG",
+    "SSS"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "E": { "item": "minecraft:emerald" },
+    "S": { "item": "minecraft:stone" }
+  },
+  "result": {
+    "id": "createstockexchange:stock_exchange",
+    "count": 1
+  }
+}

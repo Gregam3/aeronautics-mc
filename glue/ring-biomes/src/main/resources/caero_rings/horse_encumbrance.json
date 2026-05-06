@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "limit_multiplier": 2.0,
+  "max_slow": 0.6,
+  "tick_interval": 20
+}

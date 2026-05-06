@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/honeycomb"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.0
+      },
+      "model": "caero_specialization:item/honeycomb_unrefined"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.3
+      },
+      "model": "caero_specialization:item/honeycomb_low"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.6
+      },
+      "model": "caero_specialization:item/honeycomb_medium"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.9
+      },
+      "model": "caero_specialization:item/honeycomb_high"
+    }
+  ]
+}

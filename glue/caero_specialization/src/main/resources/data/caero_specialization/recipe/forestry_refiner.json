@@ -1,4 +1,9 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:false"
+    }
+  ],
   "type": "minecraft:crafting_shaped",
   "pattern": [
     "SSS",
@@ -6,8 +11,12 @@
     "SSS"
   ],
   "key": {
-    "S": { "item": "minecraft:smooth_stone" },
-    "L": { "tag": "minecraft:logs" }
+    "S": {
+      "item": "minecraft:smooth_stone"
+    },
+    "L": {
+      "tag": "minecraft:logs"
+    }
   },
   "result": {
     "id": "caero_specialization:forestry_refiner",

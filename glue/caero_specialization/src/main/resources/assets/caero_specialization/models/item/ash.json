@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/gunpowder"
+    "layer0": "caero_specialization:item/byproducts/ash"
   }
 }

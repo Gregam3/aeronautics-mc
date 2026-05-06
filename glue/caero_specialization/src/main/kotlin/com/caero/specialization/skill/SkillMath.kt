@@ -30,23 +30,40 @@ import kotlin.random.Random
  */
 object SkillMath {
 
-    /** Hard ceiling on a meaningful level. XP can keep accumulating but level stops growing. */
-    const val MAX_LEVEL = 100
+    /**
+     * Mutable runtime knobs, populated from [com.caero.specialization.config.CaeroSpecializationConfig]
+     * by [com.caero.specialization.CaeroSpecialization]'s config-load listeners. Tests run plain
+     * JUnit (no Forge bootstrapping) and rely on these defaults — production code never
+     * reads them directly; it goes through the public functions below.
+     *
+     * Volatile because the config-reload listener runs off-thread.
+     */
+    @Volatile var xpCurveCoefficient: Long = 100L
+    @Volatile var maxLevelCap: Int = 100
+
+    /** Back-compat alias — old call sites and tests reference this constant by name. */
+    const val MAX_LEVEL_DEFAULT: Int = 100
+
+    @Deprecated(
+        "Read maxLevelCap to honour the hot-reloadable config value.",
+        ReplaceWith("maxLevelCap"),
+    )
+    val MAX_LEVEL: Int get() = maxLevelCap
 
     fun xpForLevel(level: Int): Long {
         val l = (level - 1).coerceAtLeast(0).toLong()
-        return 100L * l * l
+        return xpCurveCoefficient * l * l
     }
 
     fun levelForXp(xp: Long): Int {
         if (xp <= 0L) return 1
-        val raw = floor(sqrt(xp.toDouble() / 100.0)).toInt() + 1
-        return raw.coerceIn(1, MAX_LEVEL)
+        val raw = floor(sqrt(xp.toDouble() / xpCurveCoefficient.toDouble())).toInt() + 1
+        return raw.coerceIn(1, maxLevelCap)
     }
 
     fun xpToNextLevel(xp: Long): Long {
         val current = levelForXp(xp)
-        if (current >= MAX_LEVEL) return 0L
+        if (current >= maxLevelCap) return 0L
         return (xpForLevel(current + 1) - xp).coerceAtLeast(0L)
     }
 
@@ -56,7 +73,7 @@ object SkillMath {
      */
     fun progressFractionInLevel(xp: Long): Double {
         val current = levelForXp(xp)
-        if (current >= MAX_LEVEL) return 1.0
+        if (current >= maxLevelCap) return 1.0
         val base = xpForLevel(current)
         val span = (xpForLevel(current + 1) - base).coerceAtLeast(1L)
         val into = (xp - base).coerceIn(0L, span)
@@ -72,7 +89,7 @@ object SkillMath {
     }
 
     fun qualityWeights(level: Int): QualityWeights {
-        val lvl = level.coerceIn(1, MAX_LEVEL)
+        val lvl = level.coerceIn(1, maxLevelCap)
         val l1 = (lvl - 1).toDouble()
         // High climbs 1 % → ~59 % across levels 1..100.
         val high = (0.01 + 0.0059 * l1).coerceIn(0.0, 1.0)

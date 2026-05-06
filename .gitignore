@@ -1,2 +1,6 @@
 /.claude/
 /.research/
+
+# Local copies of upstream jars (compileOnly deps for glue/createstockexchange)
+/glue/CreateNumismatics-*.jar
+/glue/create-1.*.jar

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "caero_specialization:block/super_light_planks"
+  }
+}

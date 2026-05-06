@@ -98,7 +98,7 @@ object XpFeedback {
                 .append(Component.literal("   "))
                 .append(progressBar(xp, SUMMARY_BAR_WIDTH))
 
-            out += if (level >= SkillMath.MAX_LEVEL) {
+            out += if (level >= SkillMath.maxLevelCap) {
                 Component.literal("  ${formatNumber(xp)} XP · MAX LEVEL").withStyle(ChatFormatting.GOLD)
             } else {
                 Component.literal("  ${formatNumber(xp)} XP · ${formatNumber(toNext)} to Lv${level + 1}")

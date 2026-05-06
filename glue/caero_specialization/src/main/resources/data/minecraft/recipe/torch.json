@@ -1,0 +1,38 @@
+{
+  "type": "caero_specialization:quality_shaped",
+  "category": "misc",
+  "group": "torch",
+  "key": {
+    "#": {
+      "tag": "c:rods/wooden"
+    },
+    "X": [
+      { "item": "minecraft:coal" },
+      { "item": "minecraft:charcoal" }
+    ]
+  },
+  "pattern": [
+    "X",
+    "#"
+  ],
+  "quality_source": [
+    { "item": "minecraft:coal" },
+    { "item": "minecraft:charcoal" }
+  ],
+  "unrefined_result": {
+    "id": "minecraft:torch",
+    "count": 1
+  },
+  "low_result": {
+    "id": "minecraft:torch",
+    "count": 3
+  },
+  "medium_result": {
+    "id": "minecraft:torch",
+    "count": 5
+  },
+  "high_result": {
+    "id": "minecraft:torch",
+    "count": 10
+  }
+}

@@ -25,17 +25,25 @@ biome colours each landmass.
 
 ## 2. Player-facing result
 
-With the default 15-seed layout in `dimension/overworld.json`:
+With the default 17-seed layout in `dimension/overworld.json`:
 
 - **1 easy seed at (0, 0)** — spawn island always reads as easy tier.
-- **6 medium seeds** hexagonally around r ≈ 2400.
-- **8 hard seeds** around r ≈ 4000.
+- **8 medium seeds** spread across r ≈ 1700–4200, including two outer
+  pockets near r ≈ 4000 that reach into the hard zone.
+- **8 hard seeds** spread across r ≈ 3000–4700, including two inner
+  intrusions near r ≈ 3000 that reach toward the middle.
+
+Seed radii are deliberately overlapped so the layout isn't concentric —
+same-radius cells in different directions can land in different tiers.
+Combined with the per-cell jittered radius floor (see §3), the easy/medium
+boundary is a wavy scallop instead of a circle. Bias still trends easy →
+middle, hard → edges, but the rings themselves are non-linear.
 
 Because Continents emergently places landmasses (spawn island + ring-1..4
-continents), over-seeding ensures each emerging continent is near a seed of the
-intended tier. A continent that happens to emerge at (3000, 1500) is nearer a
-hard seed; a continent at (2200, 0) is nearer a medium seed; spawn is
-guaranteed easy.
+continents), over-seeding ensures each emerging continent is near a seed of
+the intended tier. Spawn is guaranteed easy via the easy seed at origin
+plus the `medium_min_radius` floor (jittered ±`floor_jitter`, so the
+guaranteed-easy radius ranges roughly r=900..r=2100).
 
 ---
 
@@ -56,8 +64,11 @@ For each cell:
   1. natural = delegate.getNoiseBiome(x, y, z, sampler)
   2. if natural not in any tier tag: return natural (ocean/rivers/specials)
   3. wanted = nearestSeed(worldX, worldZ).tier
-  4. if natural's tier == wanted: return natural
-  5. else: return substituteFromTag(wanted, closest-temperature match)
+  4. apply floor: if dist² < jitteredFloor(MEDIUM/HARD), downgrade tier.
+     The floor radius is `medium_min_radius + valueNoise2D(x,z) * floor_jitter`,
+     which gives a wavy easy/medium boundary instead of a circle.
+  5. if natural's tier == wanted: return natural
+  6. else: return substituteFromTag(wanted, closest-temperature match)
 ```
 
 ~150 lines of Kotlin total. Fits the *intent* of the bounded-glue rule (single
@@ -123,8 +134,7 @@ File: `src/test/kotlin/com/caero/rings/VoronoiTieredBiomeSourceTest.kt`
 
 ## 7. What tests don't cover — in-game verification gate
 
-The JUnit suite validates pure logic. The following need live Minecraft and are
-on Greg to verify:
+The JUnit suite validates pure logic. The following need live Minecraft:
 
 - The mod actually loads under KFF without a registry crash.
 - The dimension preset JSON is accepted by vanilla's parser.
@@ -132,6 +142,21 @@ on Greg to verify:
 - Continents + Terralith + our mod compose in a fresh world without exceptions.
 - The default seed layout produces a visually-readable "1 easy island,
   several medium, several hard" experience in practice.
+
+The harness at `test/biome-tiers/` covers most of these automatically: it
+boots a NeoForge dedicated server with the full mod stack, captures the
+`caero_rings DIAG` line (proves codec parsed our JSON, tags resolved with
+content), runs `/execute if biome` at spawn (proves origin is easy), and
+runs `/locate biome` for each tier tag (proves easy/medium/hard biomes
+exist within their expected radial bands). Last green run on
+2026-04-28: spawn = `minecraft:forest`, nearest medium = `stony_shore` at
+r=1335, nearest hard = `ice_spikes` at r=2099 — all consistent with
+floor_jitter scalloping the boundary.
+
+What this still doesn't cover: the visual quality of substitution (chef's-kiss
+biome blending), large-scale mod compatibility under load, and whether the
+Continents + Terralith + caero_rings composite reads "right" in a flythrough.
+Those remain on Greg.
 
 ---
 
@@ -178,6 +203,21 @@ glue/ring-biomes/
 │   │           └── minecraft/dimension/overworld.json
 │   └── test/kotlin/com/caero/rings/
 │       └── VoronoiTieredBiomeSourceTest.kt
+├── test/
+│   ├── ore-density/                          (per-tier ore ratios in generated chunks)
+│   │   ├── run.sh
+│   │   ├── README.md
+│   │   ├── PLAN.md
+│   │   └── scripts/
+│   │       ├── bootstrap-server.sh           (one-time NeoForge install — shared with biome-tiers/)
+│   │       ├── pregen-driver.py
+│   │       └── analyze.py
+│   └── biome-tiers/                          (in-game biome tier verification)
+│       ├── run.sh
+│       ├── README.md
+│       ├── PLAN.md
+│       └── scripts/
+│           └── verify.py                     (boots server, /execute if biome at spawn, /locate biome per tier)
 └── PLAN.md (this file)
 ```
 
@@ -199,6 +239,34 @@ win over Tectonic's — confirmed easiest by shipping the override as a separate
 Paxi datapack zip instead of in our mod jar, since Paxi loads after bundled
 mod resources. Not implemented as of 2026-04-22; Greg explicitly chose
 Tectonic-only.
+
+---
+
+## 11a. 2026-04-28 — non-linear tier layout
+
+The original 15-seed layout (1 easy / 6 medium hex at r=2400 / 8 hard at r≈4000)
+read as obviously concentric rings. Replaced with a 17-seed layout that overlaps
+medium and hard radii, plus a per-cell jittered radius floor:
+
+- **Seed redistribution.** Medium seeds now span r ≈ 1700–4200 (six "inner"
+  + two "outer pocket" at r ≈ 4000); hard seeds span r ≈ 3000–4700 (six
+  "edge" + two "inner intrusion" at r ≈ 3000). A cell at r=3000 in one
+  direction is medium, in another is hard.
+- **`floor_jitter` parameter** (default 600) added to the biome source codec.
+  The `medium_min_radius` and `hard_min_radius` floors are perturbed per-cell
+  by `valueNoise2D(worldX, worldZ, scale=1500) * floor_jitter`, producing a
+  wavy easy/medium boundary instead of a circle. Same coherent value-noise
+  function lives in `VoronoiSeedMath.kt` so it's testable without Minecraft.
+- **Tests added** for noise determinism, locality (close samples → close
+  values), full-range coverage across the world, and the non-linear bias
+  property (`same radius can resolve to different tiers`).
+- **Renderer (`tools/render_map.py`) updated** to mirror the jittered floor
+  so the offline preview matches in-world behavior.
+
+Pillar fit: heuristic 3 (game gets harder further out) — bias is preserved
+(easy core, medium middle, hard edges), but the boundary is no longer a
+strict ring, which removes the "wall of biome change" feel as players
+travel outward.
 
 ---
 

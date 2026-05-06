@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.caero.claims.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MixinFireBlock"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

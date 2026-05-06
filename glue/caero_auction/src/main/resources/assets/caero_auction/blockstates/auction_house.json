@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "caero_auction:block/auction_house" }
+  }
+}

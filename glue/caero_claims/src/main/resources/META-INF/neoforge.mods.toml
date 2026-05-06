@@ -51,3 +51,6 @@ the design rationale and protection-coverage waves.
     versionRange="[6.0.0,)"
     ordering="AFTER"
     side="BOTH"
+
+[[mixins]]
+    config="${mod_id}.mixins.json"

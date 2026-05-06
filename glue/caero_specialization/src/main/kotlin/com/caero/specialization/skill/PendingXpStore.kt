@@ -53,6 +53,10 @@ class PendingXpStore : SavedData() {
             SkillKind.FORESTRY -> "PendingForestry"
             SkillKind.MINING -> "PendingMining"
             SkillKind.ARMOURER -> "PendingArmourer"
+            SkillKind.HUSBANDRY -> "PendingHusbandry"
+            SkillKind.ALCHEMIST -> "PendingAlchemist"
+            SkillKind.JEWELERY -> "PendingJewelery"
+            SkillKind.FISHING -> "PendingFishing"
         }
 
         private fun load(tag: CompoundTag, registries: HolderLookup.Provider): PendingXpStore {

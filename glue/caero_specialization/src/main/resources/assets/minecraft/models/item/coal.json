@@ -5,15 +5,27 @@
   },
   "overrides": [
     {
-      "predicate": { "caero_specialization:quality": 0.3 },
+      "predicate": {
+        "caero_specialization:quality": 0.0
+      },
+      "model": "caero_specialization:item/coal_unrefined"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.3
+      },
       "model": "caero_specialization:item/coal_low"
     },
     {
-      "predicate": { "caero_specialization:quality": 0.6 },
+      "predicate": {
+        "caero_specialization:quality": 0.6
+      },
       "model": "caero_specialization:item/coal_medium"
     },
     {
-      "predicate": { "caero_specialization:quality": 0.9 },
+      "predicate": {
+        "caero_specialization:quality": 0.9
+      },
       "model": "caero_specialization:item/coal_high"
     }
   ]

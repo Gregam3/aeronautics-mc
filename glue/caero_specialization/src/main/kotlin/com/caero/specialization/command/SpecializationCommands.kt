@@ -1,5 +1,6 @@
 package com.caero.specialization.command
 
+import com.caero.specialization.config.CaeroSpecializationConfig
 import com.caero.specialization.refiner.RefinerBlockEntity
 import com.caero.specialization.refiner.XpFeedback
 import com.caero.specialization.skill.SkillAttachment
@@ -81,7 +82,8 @@ object SpecializationCommands {
                             Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(::withdraw),
                         ),
-                ),
+                )
+                .then(ConfigCommand.build(CaeroSpecializationConfig.SPEC)),
         )
     }
 

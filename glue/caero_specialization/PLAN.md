@@ -151,6 +151,34 @@ NeoForge biome modifier of type `neoforge:remove_features` targeting
 ticks). It just becomes finite — no new coal spawns, players burn through
 existing supplies, charcoal economy takes over.
 
+### Anvil + Mending/Unbreaking + Villager-trade disable
+
+Vanilla anvil, the `mending` / `unbreaking` enchantments, and all villager
+trading are disabled. Anvil + enchant-side bypasses the durability
+pressure the Armourer refiner and the global UNREFINED nerf exist to
+create. Villager trading bypasses the Numismatics economy by giving
+players a parallel emerald sink/source the ledger doesn't see, plus
+trade-tier gear and books the refiner ladder is meant to gate.
+
+**Mechanism:**
+- `data/minecraft/recipe/anvil.json` — overridden with `neoforge:false`
+  condition so the recipe never registers.
+- `disable/AnvilDisable.kt` — `RightClickBlock` handler suppresses the GUI
+  on any `AnvilBlock`-derived block (anvil, chipped, damaged), so existing
+  world-gen anvils in villages remain as decoration but cannot be used
+  for naming, repair, or enchanting-combine.
+- `data/minecraft/enchantment/mending.json` and `unbreaking.json` —
+  overridden with empty `effects: {}`, empty `supported_items: []`, and
+  `weight: 1` (codec rejects 0; the [1;1024] floor is hard-coded). Existing
+  enchanted items keep the tag but the effect is a no-op; new copies
+  cannot be obtained from any source (enchanting table, villager trades,
+  loot) because the empty `supported_items` set means no item is ever a
+  legal candidate, regardless of weight.
+- `disable/VillagerTradeDisable.kt` — `EntityInteract` handler cancels
+  right-clicks on any `AbstractVillager` (covers villagers and wandering
+  traders). Mob behaviour, breeding, zombie conversion, and pathfinding
+  remain untouched; only the trade GUI is suppressed.
+
 **Pre-flight check before implementation:** open the `caero_rings` per-biome
 ore-override system (commit `0b3ef12`, the [0.2, 2.0] clamp). Coal is
 overridden there too — confirm the two systems don't conflict. The cleanest
@@ -650,6 +678,40 @@ want to test in-game, no batching.
   (forestry + mining); the same code path drives both. Diamonds excluded
   per Greg. See §17 for the v1.2 deltas.
 
+- **2026-04-30 v1.5 — shipped** — Fishing industry added. Seventh refiner
+  (`fishing_refiner`) is the first **destructive byproducts** refiner — it
+  consumes raw fish (cod / salmon / tropical_fish / pufferfish) and emits
+  three independent byproducts per refine: `fish_eye`, `fish_scale`,
+  `fish_oil`. Each byproduct rolls separately (chance + count) and each
+  rolled item gets its own quality stamp from the fisher's level via the
+  same `SkillMath.rollOutputQuality` curve mining and forestry use — so a
+  single fish can produce e.g. `1× eye[H] · 2× scale[M] · 1× oil[L]`. Per
+  fish-type yield bias: pufferfish leans hard into oil (100%) and away
+  from eyes/scales (50% / 30%), salmon leans toward oil and bigger scale
+  yield, tropical fish trades scale yield for higher eye chance, cod is
+  balanced. New `xpPerRefine.fishing` config key extends the v1.4
+  hot-reload surface. See §20 for the v1.5 deltas.
+
+- **2026-04-30 v1.4 — shipped** — Jewelery industry + socketing table added,
+  and the XP config surface was made hot-reloadable. Sixth refiner
+  (`jewelery_refiner`) consumes already-refined raw ores and emits
+  quality-tagged gems (TOPAZ / SAPPHIRE / RUBY / EMERALD) — the only refiner
+  in the chain that *requires* a non-UNREFINED input. Reachable gem set is
+  gated by ore type (copper → just TOPAZ, iron/zinc → up to RUBY, gold →
+  all four including EMERALD); within that set, input ore quality skews the
+  roll. The jeweler's own level rolls each gem's tier (LOW / MEDIUM / HIGH)
+  via the same `SkillMath.rollOutputQuality` curve mining uses, so both ends
+  of the chain matter to the final socketed item's power. New
+  `socketing_table` block (a SimpleMenuProvider opening a 2-input + 1-output
+  menu) inserts gems into any item via a `gem_sockets` data component
+  (`List<SocketEntry(GemKind, Quality)>`, max 3). Socket effects scale by
+  gem tier — see §19.5. Per-skill `xpPerRefine.<skill>` overrides plus a
+  configurable `xpCurveCoefficient` and `maxLevel` now hot-reload through
+  NeoForge's `ModConfigEvent.Reloading` listener — no restart needed for XP
+  tuning. See §19 for the v1.4 deltas. Salvaged from a partially-complete
+  upstream `gemsockets` mod (data component + menu shape) and re-wrapped in
+  the caero_specialization namespace.
+
 - **2026-04-29 v1.3 — shipped** — Armourer industry added. Quality now
   applies to swords (75 / 90 / 110 / 130 % attack damage), armour
   (60 / 80 / 110 / 140 % `ARMOR` + `ARMOR_TOUGHNESS`) and tool
@@ -973,3 +1035,507 @@ tiers + 5 tool types × 6 metals = ~150 model-override JSON files. Not
 worth doing by hand for placeholder borders — TEXTURES_TODO.md tracks
 this. Tooltip text continues to display quality on every armourer item
 (tag-driven).
+
+---
+
+## 19. v1.4 deltas — jewelery industry, sockets, hot-reloadable XP
+
+Two product threads landed together in v1.4 because they share data shape
+(quality-tagged gems carry tier into the socket). A third, smaller thread —
+making XP tuning live — landed alongside them since the tier-driven socket
+effects make balance-iteration speed matter more than it did in v1.1–v1.3.
+
+### 19.1 New skill: `JEWELERY`
+
+Sixth value in `SkillKind` (after FORESTRY / MINING / ARMOURER / HUSBANDRY /
+ALCHEMIST). New field `PlayerSkills.jeweleryXp`; codec uses `optionalFieldOf`
+so old player saves load with `jeweleryXp = 0`. `PendingXpStore` stores
+offline grants under `PendingJewelery`. All other `when (kind)` switches
+extended exhaustively — Kotlin's exhaustive-when compiler check caught the
+remaining call sites (XpFeedback / SpecializationCommands iterate
+`SkillKind.values()` so they auto-enrolled).
+
+### 19.2 New refiner: `caero_specialization:jewelery_refiner`
+
+| Property | Value |
+|---|---|
+| Skill | `JEWELERY` |
+| Tag | `caero_specialization:refinable_jewelery` |
+| Inputs | `minecraft:raw_iron`, `minecraft:raw_gold`, `minecraft:raw_copper`, `create:raw_zinc` (optional) — same set as the mining refiner |
+| Required input quality | **Must be non-UNREFINED.** Refined raw ore from the mining refiner is the only legitimate input. Plain mined raw ore is rejected with `"Jewelery requires already-refined raw ore — run it through a mining refiner first."` |
+| Output | One gem per input (no quality is stamped on the *input* — it's destroyed) |
+| Recipe | 8 cobblestone + 1 diamond (centre slot) |
+| BlockEntity | `RefinerBlockEntity` (shared with all other refiners; behaviour branches in `RefinerInteraction`) |
+
+This is the only refiner in the chain that consumes refined material rather
+than producing it — the pillar-#1 effect is that miners and jewelers
+*depend on each other*. A jeweler with no miner customer can only refine
+their own ore (which still grants them XP and produces gems, but at the
+cost of self-supplied input).
+
+### 19.3 Ore → gem ladder
+
+| Input ore        | Reachable gems                            |
+|------------------|-------------------------------------------|
+| raw_copper       | TOPAZ                                     |
+| raw_iron, raw_zinc | TOPAZ, SAPPHIRE, RUBY                   |
+| raw_gold         | TOPAZ, SAPPHIRE, RUBY, EMERALD            |
+
+Iron and zinc share a tier because they're roughly even in real overworld
+density (Greg, 2026-04-30). Gold is the only ore that can yield EMERALD.
+
+Within an ore's reachable set, the **input ore's quality** skews the roll
+toward higher-tier gems on HIGH-quality input. Weight tables live in
+`jewelery/JewelryRolls.kt:weightsFor`. Examples:
+
+| Ore × input quality | TOPAZ | SAPPHIRE | RUBY | EMERALD |
+|---|---|---|---|---|
+| copper · any | 100% | — | — | — |
+| iron / zinc · LOW | 65% | 30% | 5% | — |
+| iron / zinc · HIGH | 10% | 30% | 60% | — |
+| gold · LOW | 55% | 30% | 12% | 3% |
+| gold · HIGH | 5% | 20% | 40% | 35% |
+
+UNREFINED input is rejected upstream (see §19.2) so the UNREFINED row in
+`weightsFor` is a defensive fallback only.
+
+### 19.4 Gem items (plain stackables, quality-tagged)
+
+Four new items, `caero_specialization:{topaz,sapphire,ruby,emerald_gem}`.
+The 4th is named `emerald_gem` (titled "Cut Emerald") to avoid colliding
+with `minecraft:emerald` — vanilla emerald remains the trade currency and
+is **not** socketable.
+
+Models reuse vanilla item textures as placeholders (see TEXTURES_TODO.md):
+
+| Gem item | Borrowed texture |
+|---|---|
+| `topaz` | `minecraft:item/gold_nugget` |
+| `sapphire` | `minecraft:item/lapis_lazuli` |
+| `ruby` | `minecraft:item/redstone` |
+| `emerald_gem` | `minecraft:item/emerald` |
+
+Gems carry the same `caero_specialization:quality` data component the rest
+of the mod uses (LOW / MEDIUM / HIGH), stamped at refine time by the
+**jeweler's** level via the existing `SkillMath.rollOutputQuality` curve.
+That means **both** the miner's level (which drives input quality, which
+drives *which* gem rolls) and the jeweler's level (which drives the gem's
+tier, which drives effect strength) matter to the final socketed item.
+
+`GemItem.appendHoverText` adds a `Socket: <effect>` line per gem so
+players can see what the gem will do at its current quality without
+having to socket it first.
+
+### 19.5 Socketing table + socket effects
+
+`caero_specialization:socketing_table` is a `SimpleMenuProvider` block —
+right-click opens a 2-input + 1-output menu (item slot, gem slot, result
+slot). Reuses the vanilla furnace GUI background as a placeholder; slot
+positions match (input 56,17 · gem 56,53 · result 116,35). Recipe: 3 gold
+ingots + 1 smithing table + 5 smooth stone.
+
+Socket data is stored as a `gem_sockets` data component on the
+**target item's** ItemStack:
+
+```kotlin
+data class GemSocketsData(val entries: List<SocketEntry>)   // max 3
+data class SocketEntry(val gem: GemKind, val quality: Quality)
+```
+
+Effects fire via `ItemAttributeModifierEvent` (attack damage, armour,
+mining speed) and `LivingDamageEvent.Post` (emerald lifesteal). All four
+gems scale by tier — see `gem/GemSocketsHandler.kt`:
+
+| Gem | Effect | Slot group | LOW | MEDIUM | HIGH |
+|---|---|---|---|---|---|
+| TOPAZ | block break speed | MAINHAND | +5% | +15% | +30% |
+| SAPPHIRE | armour | ARMOR (any slot) | +1 | +2 | +4 |
+| RUBY | attack damage | MAINHAND | +1 | +2 | +4 |
+| EMERALD | heal per dealt-hit | MAINHAND (item-held check) | +0.5 HP | +1 HP | +2 HP |
+
+Topaz uses `Operation.ADD_MULTIPLIED_BASE` so vanilla renders the modifier
+as `+X%` in the item tooltip; the others use `ADD_VALUE` which renders as
+flat numbers. With 3 sockets max, an end-game socketed sword can carry
++12 attack damage (3× HIGH ruby) or 3× HIGH emerald = +6 HP heal per hit.
+
+The socketing flow preserves the gem's quality into the entry (read at
+`SocketingTableMenu.slotsChanged` from the gem's `Quality` component;
+defaults to MEDIUM if the gem has no quality stamped, e.g. legacy items
+crafted on a pre-v1.4 build).
+
+### 19.6 Hot-reloadable XP config
+
+XP-related tuning was made live in v1.4 because the longer industry chain
+(miner → jeweler → smith) means balance-iteration costs are higher — a
+restart per tweak adds friction that compounds across three skills.
+
+NeoForge's `ModConfigSpec.Type.COMMON` already auto-reloads on file change;
+v1.4 just took advantage of it for two extra dimensions.
+
+**New keys in `serverconfig/caero_specialization-common.toml`:**
+
+```toml
+[skill]
+  # Default XP per refine (unchanged key from v1.1).
+  xpPerRefine = 50
+
+  # Per-skill overrides. -1 = inherit the global default above.
+  # Any positive value wins.
+  [skill.xpPerRefine]
+  forestry  = -1
+  mining    = -1
+  armourer  = -1
+  husbandry = -1
+  alchemist = -1
+  jewelery  = -1
+
+  # xpForLevel(L) = COEFFICIENT × (L-1)²
+  # Lower → faster levelling. Hot-reloadable.
+  xpCurveCoefficient = 100
+
+  # Hard ceiling on reported level. Stored XP can keep growing past it.
+  maxLevel = 100
+```
+
+**Reload path:**
+- `xpPerRefine` and per-skill overrides are read by
+  `CaeroSpecializationConfig.xpPerRefineFor(skill)` on every refine, so
+  edits take effect on the next refine without any push event.
+- `xpCurveCoefficient` and `maxLevel` need to land in `SkillMath` (which
+  is called outside the refine path — login XP catch-up, /caero-spec
+  level rendering, etc). Two `ModConfigEvent` listeners in
+  `CaeroSpecialization`'s init wire push them in:
+
+```kotlin
+private fun onConfigLoad(event: ModConfigEvent.Loading) {
+    if (event.config.spec === CaeroSpecializationConfig.SPEC) syncSkillMathFromConfig("loaded")
+}
+private fun onConfigReload(event: ModConfigEvent.Reloading) {
+    if (event.config.spec === CaeroSpecializationConfig.SPEC) syncSkillMathFromConfig("reloaded")
+}
+```
+
+`SkillMath.xpCurveCoefficient` and `SkillMath.maxLevelCap` are `@Volatile`
+mutable fields with sane defaults (100 / 100) so JUnit tests that don't
+bootstrap Forge see consistent values.
+
+**What this changes for a player mid-session:**
+
+- Stored XP is preserved across coefficient changes — only the *level*
+  computed from XP shifts. A player at L20 with the default 100×
+  coefficient sits on 36 100 XP; if you drop the coefficient to 50, that
+  same XP now reads as L28.
+- Per-refine XP changes are forward-only — past refines aren't retro'd.
+- Lowering `maxLevel` mid-session is safe (levels just clamp); raising it
+  legitimately lets capped players resume progressing.
+
+### 19.7 Files added / changed in v1.4
+
+```
+glue/caero_specialization/
+├── src/main/kotlin/com/caero/specialization/
+│   ├── gem/                                 ← NEW package
+│   │   ├── GemKind.kt                       enum: TOPAZ/SAPPHIRE/RUBY/EMERALD
+│   │   ├── GemItem.kt                       Item subclass + per-tier hover text
+│   │   ├── GemSocketsData.kt                List<SocketEntry> data component
+│   │   ├── GemSocketsHandler.kt             attribute / damage / tooltip events
+│   │   ├── GemSocketsRegistry.kt            data component + menu type registers
+│   │   ├── SocketingTableBlock.kt           SimpleMenuProvider on right-click
+│   │   ├── SocketingTableMenu.kt            2-input + 1-output container menu
+│   │   └── SocketingTableScreen.kt          client GUI (reuses furnace bg)
+│   ├── jewelery/                            ← NEW package
+│   │   └── JewelryRolls.kt                  ore-tier ladder + weight tables
+│   ├── skill/SkillKind.kt                   + JEWELERY value
+│   ├── skill/PlayerSkills.kt                + jeweleryXp field + codec entry
+│   ├── skill/PendingXpStore.kt              + PendingJewelery NBT key
+│   ├── skill/SkillMath.kt                   const → @Volatile var (curve / cap)
+│   ├── refiner/RefinerInteraction.kt        + JEWELERY branch in onRightClick
+│   ├── refiner/RefinerBlockEntity.kt        + JEWELERY → BE type lookup
+│   ├── refiner/XpFeedback.kt                MAX_LEVEL → maxLevelCap
+│   ├── config/CaeroSpecializationConfig.kt  + per-skill XP keys, curve, cap
+│   └── CaeroSpecialization.kt               + jewelery refiner / sockets / config-listeners
+├── src/main/resources/
+│   ├── assets/caero_specialization/
+│   │   ├── blockstates/{jewelery_refiner,socketing_table}.json
+│   │   ├── lang/en_us.json                  + 4 gems + refiner + socketing table
+│   │   └── models/
+│   │       ├── block/{jewelery_refiner,socketing_table}.json
+│   │       └── item/{topaz,sapphire,ruby,emerald_gem,jewelery_refiner,socketing_table}.json
+│   └── data/caero_specialization/
+│       ├── tags/item/refinable_jewelery.json
+│       ├── recipe/{jewelery_refiner,socketing_table}.json
+│       └── loot_table/blocks/{jewelery_refiner,socketing_table}.json
+└── TEXTURES_TODO.md                         + 4 gems + 2 blocks + GUI + sound
+```
+
+### 19.8 Test coverage in v1.4
+
+- Existing `SkillMathTest` JUnit suite still passes — uses `SkillMath`'s
+  defaults (the config-load listeners never fire under JUnit), proving the
+  mutable-defaults pattern doesn't break tests.
+- No new JUnit tests added for `JewelryRolls` — the weight tables are
+  declarative `when` blocks with manually-summed-to-1.0 distributions, and
+  the rolling logic is the same `cumulative-< roll` shape as
+  `SkillMath.pick`. Could be added if balance regressions show up.
+- Gametest / dedicated-server-harness coverage **not** added in v1.4. The
+  flows that need in-world verification (right-click cycle, socket-menu
+  result-slot, gem effects under combat) are all client-driven; the
+  existing harness pattern covers worldgen, not GUI/menus.
+
+### 19.9 Still deferred (carries forward to v1.5+)
+
+- **Custom gem textures.** All four gems borrow vanilla item textures.
+- **Custom block textures** for jewelery_refiner + socketing_table.
+- **Custom GUI background** for socketing table.
+- **Vanilla emerald unification.** Greg flagged the question: should
+  `caero_specialization:emerald_gem` and `minecraft:emerald` be the same
+  item? Currently distinct so traders aren't accidentally socketing their
+  villager-bought emeralds, but unifying would simplify the trade economy.
+  Open question.
+- **Gametest coverage** for the right-click cycle and socket flow.
+
+---
+
+## 20. v1.5 deltas — fishing industry (destructive byproducts)
+
+The fishing refiner is the first refiner in the mod that produces **multiple
+byproducts per refine** rather than a single quality-stamped output. It's
+also the first refiner that's purely destructive — fish is gone, byproducts
+arrive, no quality-tagged version of the input survives. This unlocks a
+crafting-materials-from-food category that the other industries don't cover.
+
+### 20.1 New skill: `FISHING`
+
+Seventh value in `SkillKind`. New `PlayerSkills.fishingXp` field; codec uses
+`optionalFieldOf` so old saves load with `fishingXp = 0`. `PendingXpStore`
+keys offline grants under `PendingFishing`. All exhaustive `when (kind)`
+sites extended; the Kotlin compiler caught the rest.
+
+### 20.2 New refiner: `caero_specialization:fishing_refiner`
+
+| Property | Value |
+|---|---|
+| Skill | `FISHING` |
+| Tag | `caero_specialization:refinable_fishing` |
+| Inputs | `minecraft:cod`, `minecraft:salmon`, `minecraft:tropical_fish`, `minecraft:pufferfish` |
+| Required input quality | None — fish is consumed regardless of quality |
+| Output | Multiple per refine: 0–1 eye, 0–2 scales, 0–1 oil (each independently rolled) |
+| Recipe | 8 cobblestone + 1 fishing_rod (centre slot) |
+| BlockEntity | `RefinerBlockEntity` (shared with the other six refiners; behaviour branches in `RefinerInteraction`) |
+
+**Pillar trace.**
+- **#1 (reason to trade):** byproducts feed downstream chains — fish_eye is
+  earmarked for alchemy potion brewing, fish_scale for armourer light-armour
+  upgrades, fish_oil for forestry fuel substitution. (Consumers not yet
+  wired — see §20.7.) Fishing-specialists supply, alchemy / armourer /
+  forestry players consume.
+- **#4 (reason to specialize):** XP curve is per-skill; fishers don't
+  accidentally level alchemy by processing fish.
+- **Shared input with husbandry:** raw fish (cod, salmon, tropical_fish)
+  is also in `refinable_husbandry` — players choose: stamp quality on the
+  fish as food (husbandry), or destroy it for crafting materials (fishing).
+  Different industries, different outputs, same input. Pufferfish is
+  fishing-only because vanilla doesn't let you eat one safely.
+
+### 20.3 Per-fish yield distributions
+
+Each fish type has its own (eye-chance, scale-chance, scale-bonus-chance,
+oil-chance) tuple in `fishing/FishYield.kt:ratesFor`:
+
+| Fish | Eye | Scale | Scale bonus +1 | Oil |
+|---|---|---|---|---|
+| cod | 50% | 80% | 30% | 55% |
+| salmon | 55% | 85% | 40% | 75% |
+| tropical_fish | 70% | 65% | 20% | 40% |
+| pufferfish | 30% | 50% | 15% | **100%** |
+
+Rolls are independent — a single cod can yield anywhere from `(0,0,0)` to
+`(1,2,1)` byproducts. Variance is the appeal; high-yield rolls feel
+rewarding without making the average drop overpowering.
+
+### 20.4 Output quality is rolled per-item
+
+The fisher's level gates byproduct **quality** (LOW / MEDIUM / HIGH) via the
+same `SkillMath.rollOutputQuality` curve forestry / mining / armourer /
+husbandry / alchemist / jewelery all use. Critically, quality is rolled
+*per byproduct item*, not once per fish — so one refine of a salmon might
+yield `1× eye[H] · 2× scale[M] · 1× oil[L]`, mixed tiers. This matches the
+"each charcoal in a stack rolls separately" pattern from v1.1.
+
+Implementation: `RefinerInteraction.emitByproduct` calls
+`SkillMath.rollOutputQuality(ownerLevel, level.random)` once per spawned
+item, stamps `QualityComponent.QUALITY` on the resulting stack, then hands
+it to the player.
+
+### 20.5 New byproduct items (plain stackable, quality-tagged)
+
+Three new items, all `Item(Properties().stacksTo(64))` with no special
+behaviour beyond the per-stack quality stamp. They're crafting-material
+intermediates — no socket effect, no consumable use yet.
+
+| Item registry id | Borrowed texture | Intended downstream consumer |
+|---|---|---|
+| `caero_specialization:fish_eye` | `minecraft:item/spider_eye` | Alchemy potions (v2 alchemist) |
+| `caero_specialization:fish_scale` | `minecraft:item/prismarine_shard` | Armourer light-armour upgrades (v2) |
+| `caero_specialization:fish_oil` | `minecraft:item/honey_bottle` | Forestry fuel substitute (v2) |
+
+All three carry the `caero_specialization:quality` data component when they
+spawn, so they tooltip / colour-border the same as other quality-tagged
+items. Stack semantics are vanilla: same-quality fish_eyes stack to 64,
+mixed-quality fish_eyes occupy separate slots (per data-component identity).
+
+### 20.6 Output messaging
+
+The action-bar message after a refine reads e.g.
+
+```
+Processed ×3 fish → 2×eye[H] 1×eye[M] 4×scale[M] 2×scale[L] 3×oil[H]   +150 XP
+```
+
+Implementation: `RefinerInteraction.FishBreakdown` is a `LinkedHashMap`
+keyed on `(byproduct-label, quality)`, and `fishBreakdownInline` walks
+the canonical eye→scale→oil order with HIGH→LOW within each. (The old
+GemBreakdown / QualityBreakdown classes coexist in the same file —
+`RefinerInteraction.kt` is now the single dispatch point for all five
+output shapes: standard quality stamp, jewelery gems, fishing byproducts,
+plus the existing forestry-ash sidecar.)
+
+### 20.7 Files added / changed in v1.5
+
+```
+glue/caero_specialization/
+├── src/main/kotlin/com/caero/specialization/
+│   ├── fishing/                                ← NEW package
+│   │   └── FishYield.kt                        FishKind enum + per-fish yield rates + roll fn
+│   ├── skill/SkillKind.kt                      + FISHING value
+│   ├── skill/PlayerSkills.kt                   + fishingXp field + codec entry
+│   ├── skill/PendingXpStore.kt                 + PendingFishing NBT key
+│   ├── refiner/RefinerInteraction.kt           + FISHING branch + doFishingBatch + FishBreakdown
+│   ├── refiner/RefinerBlockEntity.kt           + FISHING → BE type lookup
+│   ├── config/CaeroSpecializationConfig.kt     + XP_PER_REFINE_FISHING + xpPerRefineFor branch
+│   └── CaeroSpecialization.kt                  + fishing refiner / 3 byproduct items
+├── src/main/resources/
+│   ├── assets/caero_specialization/
+│   │   ├── blockstates/fishing_refiner.json
+│   │   ├── lang/en_us.json                     + 3 byproducts + refiner
+│   │   └── models/
+│   │       ├── block/fishing_refiner.json
+│   │       └── item/{fishing_refiner,fish_eye,fish_scale,fish_oil}.json
+│   └── data/
+│       ├── caero_specialization/
+│       │   ├── tags/item/refinable_fishing.json
+│       │   ├── recipe/fishing_refiner.json
+│       │   └── loot_table/blocks/fishing_refiner.json
+│       └── minecraft/tags/block/mineable/pickaxe.json   + fishing_refiner
+└── TEXTURES_TODO.md                            + 1 block + 3 items
+```
+
+### 20.8 Test coverage in v1.5
+
+- Existing `SkillMathTest` still passes — the curve is unchanged.
+- No new JUnit tests added for `FishYield` — the rates are declarative
+  `when` blocks, the roll is straightforward independent dice. If
+  balance regressions show up I'll add table-driven tests at that point.
+- In-world flow not gametested. Right-click + sneak-stack-refine paths
+  share infrastructure with the other six refiners — if those work, this
+  works.
+
+### 20.9 Still deferred (carries forward to v1.6+)
+
+- **Downstream consumers.** Fish_eye / fish_scale / fish_oil are
+  *produced* but nothing *consumes* them yet. v2 alchemist (potion-brewing
+  recipes), v2 armourer (light-armour upgrades), v2 forestry (fuel
+  substitution) are the natural homes. Until those ship, the byproducts
+  are visually present but economically inert — same situation `ash` was
+  in between v1.1 and v2 forestry.
+- **Custom textures** for the fishing refiner block + 3 byproduct items
+  (TEXTURES_TODO.md updated).
+- **Modded fish.** Aquaculture / similar mods aren't installed in the
+  Prism instance, so we don't bother with optional tags. If a fish-mod
+  ships later, just append its fish to `refinable_fishing.json` and
+  `FISH_TO_KIND` in `FishYield.kt`.
+
+---
+
+## 21. v1.6 delta — JEWELERY salvage path
+
+The JEWELERY refiner now doubles as a salvage station: feed it an iron
+tool or piece of armour and it returns `minecraft:raw_iron` stamped
+UNREFINED. This closes the iron-equipment loop — broken gear isn't
+deadweight any more, but the recovery rate is harsh enough that a
+high-quality item is still worth keeping over the salvage value.
+
+### 21.1 Formula
+
+```
+expected = base × durabilityFraction × qualityMultiplier
+output   = floor(expected) + (1 if rng.nextDouble() < frac(expected) else 0)
+```
+
+| Item             | Base | Notes |
+|------------------|------|-------|
+| iron_sword       | 2    | recipe iron cost |
+| iron_shovel      | 1    | recipe iron cost |
+| iron_hoe         | 2    | recipe iron cost |
+| iron_pickaxe     | 3    | recipe iron cost |
+| iron_axe         | 3    | recipe iron cost |
+| iron_helmet      | 5    | recipe iron cost |
+| iron_chestplate  | 8    | recipe iron cost |
+| iron_leggings    | 7    | recipe iron cost |
+| iron_boots       | 4    | recipe iron cost |
+| shears           | 2    | recipe iron cost |
+
+| Quality   | Multiplier |
+|-----------|------------|
+| UNREFINED | 0.50       |
+| LOW       | 0.70       |
+| MEDIUM    | 1.00       |
+| HIGH      | 1.30       |
+
+Worked examples (matching the design conversation):
+
+- LOW iron_sword at 20 % durability → 2 × 0.2 × 0.7 = **0.28** → 28 %
+  chance of 1 raw_iron, 72 % chance of nothing.
+- MEDIUM iron_chestplate at 50 % durability → 8 × 0.5 × 1.0 = **4.0**
+  → always exactly 4 raw_iron.
+- HIGH iron_pickaxe pristine → 3 × 1.0 × 1.3 = **3.9** → 90 % chance of
+  4, 10 % chance of 3. Over-recovery is the carrot for keeping
+  HIGH-quality tools alive.
+
+### 21.2 Routing
+
+In `RefinerInteraction.onRightClick`, the JEWELERY branch detects
+salvageable items via `JewelrySalvage.baseCountFor(item)` *before* the
+standard `REFINABLE_JEWELERY` tag check. If the held item maps, it
+routes to `handleJewelrySalvage` and returns. Otherwise the existing
+gem-crack flow takes over. Tools are not added to the refinable tag —
+the salvage path bypasses it entirely so the tag's "must be raw ore"
+semantics stay clean.
+
+Tools have stack size 1; salvage processes one tool per right-click and
+ignores shift-click batching. Fee, owner-credit, and XP grant follow
+the same pattern as the gem-crack flow.
+
+### 21.3 Files
+
+- `jewelery/JewelrySalvage.kt` — pure-logic module: item → base map,
+  quality multipliers, `expectedYield(base, damage, maxDamage, quality)`,
+  `roll(expected, random)`. Both `RandomSource` and
+  `kotlin.random.Random` overloads exist so the math is unit-testable.
+- `refiner/RefinerInteraction.kt` — early-return salvage branch +
+  `handleJewelrySalvage` helper.
+- `JewelrySalvageTest.kt` — JUnit coverage of the formula and the
+  empirical mean of the floor-plus-frac roll.
+
+### 21.4 Deferred
+
+- **Other materials.** Gold / diamond / netherite / copper / Create
+  brass/zinc tools and armour are not yet salvageable. Extension is a
+  one-line addition to the base-cost map plus an output-item branch.
+  Held off until Greg confirms the iron pass feels right.
+- **Modded tools.** Same story — Create wrenches, mechanical-arm
+  components, etc. aren't in scope for v1.6.
+- **Jeweler level scaling on yield.** The owner's JEWELERY level is not
+  currently a factor. If salvage feels too low at high levels we can
+  add a small `(1 + level × k)` multiplier; held off to keep the v1.6
+  formula transparent.

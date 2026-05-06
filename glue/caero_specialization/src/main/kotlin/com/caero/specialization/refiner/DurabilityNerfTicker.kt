@@ -1,7 +1,6 @@
 package com.caero.specialization.refiner
 
-import com.caero.specialization.quality.Quality
-import com.caero.specialization.quality.QualityComponent
+import com.caero.specialization.quality.QualityScore
 import net.minecraft.core.component.DataComponents
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.item.ItemStack
@@ -48,8 +47,8 @@ object DurabilityNerfTicker {
         val baseMax = stack.item.components().getOrDefault(DataComponents.MAX_DAMAGE, 0)
         if (baseMax <= 0) return
 
-        val quality = stack.get(QualityComponent.QUALITY.get()) ?: Quality.UNREFINED
-        val mul = QualityScaling.durabilityMultiplier(quality)
+        val score = QualityScore.effective(stack)
+        val mul = QualityScore.durabilityMultiplier(score)
         val expectedMax = (baseMax * mul).toInt().coerceAtLeast(1)
 
         val currentMax = stack.get(DataComponents.MAX_DAMAGE) ?: baseMax

@@ -1,6 +1,7 @@
 package com.caero.claims.client
 
-import com.caero.claims.CaeroClaims
+import com.caero.claims.ClaimWandItem
+import com.caero.claims.data.ADMIN_OWNER_UUID
 import com.caero.claims.data.boundingBoxFromCorners
 import net.createmod.catnip.outliner.Outliner
 import net.minecraft.client.Minecraft
@@ -27,6 +28,7 @@ object ClaimRenderer {
 
     private const val OWN_RGB = 0x68C586     // green — confirmed claim, owned by you
     private const val FOREIGN_RGB = 0xC55858 // red — confirmed claim, owned by someone else
+    private const val ADMIN_RGB = 0x8C68F0   // purple — admin-owned (public protected zone)
     private const val PREVIEW_RGB = 0xC5B548 // yellow — live, unconfirmed selection
     private const val ARMED_RGB = 0xFF8800   // orange — armed, awaiting Y confirmation
     private const val LINE_WIDTH = 1f / 16f
@@ -46,7 +48,11 @@ object ClaimRenderer {
         val ownerUuid = player.uuid
 
         for (claim in ClientClaimStore.getForCurrentDimension()) {
-            val color = if (claim.owner == ownerUuid) OWN_RGB else FOREIGN_RGB
+            val color = when {
+                claim.owner == ADMIN_OWNER_UUID -> ADMIN_RGB
+                claim.owner == ownerUuid -> OWN_RGB
+                else -> FOREIGN_RGB
+            }
             for ((idx, v) in claim.volumes.withIndex()) {
                 val slot = SLOT_PREFIX + claim.id + ":" + idx
                 outliner.showAABB(slot, toAABB(v))
@@ -74,8 +80,6 @@ object ClaimRenderer {
         (b.maxX() + 1).toDouble(), (b.maxY() + 1).toDouble(), (b.maxZ() + 1).toDouble(),
     )
 
-    private fun isHoldingWand(player: Player): Boolean {
-        val wand = CaeroClaims.CLAIM_WAND.get()
-        return player.mainHandItem.item === wand || player.offhandItem.item === wand
-    }
+    private fun isHoldingWand(player: Player): Boolean =
+        player.mainHandItem.item is ClaimWandItem || player.offhandItem.item is ClaimWandItem
 }

@@ -167,6 +167,45 @@ world feel genuinely big, so flying somewhere *means* something.
   `sable-findings.md` for the failure modes and why per-tick is correct (and
   why throttling would actively break it). Same `inventory_multiplier` knob as
   chest_mass so the calibration stays consistent.
+- **2026-04-26** — **Server perf-tuning baseline.** Tuned to fit 6–10 players on a
+  single Server-thread on cpx42 (shared CPU). Knob positions: `simulation-distance=4`
+  (vanilla default 10), `randomTickSpeed=2` (default 3), TAN
+  `near_heat_cool_proximity=4` (default 8). Mods removed for perf reasons:
+  **Radioactive** (mcreator-generated, ran a block-state lookup per entity per tick;
+  recovered ~50% of tick budget) and **Alex's Mobs** (16× outlier in spark profile;
+  heavy AI/pathfinding for ambient mobs — note: was originally listed dropped, then
+  quietly slipped back in; perf data confirmed the original drop was correct). Mods
+  added: **Spark** (in-game profiler) and **ModernFix** (memory + small tick wins);
+  Radium tried but blocked by Create's hard incompatibility. Recovery: TPS 8 → 20,
+  ms/tick 120 → 32. Diagnostic procedure (jstack + spark + targeted disable) in
+  `runbook.md` §13.
+- **2026-04-28** — **Gravestone Mod (Henkelmax) 1.21.1-1.0.35 added.** Death drops
+  the player's inventory into a `gravestone` block at the death site rather than
+  scattering items. Combines with `caero_rings` `DeathPreserve.kt` (food/thirst
+  capped to 3 on respawn) so death still costs time and creates a vulnerable
+  return trip — but doesn't hand a full-wipe to the unlucky. Rationale: H3
+  outer-biome lethality only stays viable if there is a recovery loop; without
+  one, players never venture far. Both client + server required.
+- **2026-04-29** — **Specialization & refining mod (`caero_specialization`) designed.**
+  Per-stack item *quality* (data component: unrefined/low/medium/high) plus a
+  player-owned **refiner block** that grants the owner XP per refine and lets
+  customers pay coins for higher-quality output. Levels deterministically cap the
+  output tier (0–19→low, 20–49→medium, 50+→high). XP curve is asymptotic
+  (`xp = 100·L²`) — ~1 hr to medium, ~5–8 hrs to high, ~30 hrs to functional
+  ceiling. **v1 ships fuel only:** charcoal burn ladder is 0.25× / 0.5× / 1× /
+  2× vanilla per quality, vanilla coal disabled via biome modifier, ash
+  byproduct accumulates for v2's forestry industry to consume (potash → sapling
+  growth). Pillar trace: H1 (specialists outproduce generalists, customers pay
+  for refining), H4 (per-industry levels mechanically gate output quality).
+  Self-refining is allowed at full XP, no fee. Quality is a one-shot terminal
+  decision — no re-refining loop. Full design: `glue/caero_specialization/PLAN.md`.
+- **2026-04-28** — **Chest minecart crafting disabled.** Datapack override at
+  `glue/ring-biomes/.../data/minecraft/recipe/chest_minecart.json` uses NeoForge
+  `false` condition (same pattern already used in-tree to disable boats and
+  chest boats). Plain `minecart` and rails stay craftable so passenger/short-haul
+  rail still exists. Rationale: H2 — chest minecarts are a cheap rail-cargo
+  workaround that competes with airships. `hopper_minecart`, `furnace_minecart`,
+  `tnt_minecart` not yet touched.
 
 The **formal mod list with versions and sources** lives in
 [`mods.md`](./mods.md) and is the authoritative reference; update both files when
@@ -249,6 +288,20 @@ so the common "trivialize traversal" vanilla features are removed.
   biomes during world setup. These are landmarks; players discover them by
   exploration. They may eventually be gated behind OPAC claim rules so specific
   groups control access.
+- **Chest minecart crafting: disabled** (2026-04-28). Datapack override in
+  `caero_rings` (`data/minecraft/recipe/chest_minecart.json`, `neoforge:false`
+  condition). Reason: chest minecarts are a cheap rail-cargo workaround that
+  competes with airships. Plain `minecart` + rails remain craftable for
+  passenger/short-haul rail. Existing chest minecarts in chunks/inventories
+  still work — only crafting is blocked. Sibling disables already in `caero_rings`
+  for the same reason: all wooden boats and chest-boat variants, bamboo rafts,
+  and `shulker_box` (the latter to keep portable bulk storage off the map).
+- **Death handling: Gravestone Mod (Henkelmax) 1.21.1-1.0.35** (2026-04-28).
+  Inventory preserved in a grave block at the death site; player must trek back
+  to retrieve. `caero_rings` `DeathPreserve.kt` caps respawn food/thirst to 3,
+  so the return trip is materially harder than the outbound. Without this,
+  total inventory wipe on death makes outer-biome travel un-attempted and
+  collapses heuristic #3.
 
 Not in scope yet: ender pearls, ender chests, end portal behavior. Revisit once
 gameplay testing reveals how much those undermine the pillar.
@@ -341,6 +394,14 @@ Likely custom work (order of probability):
    Existing portal blocks (admin-built) still function. Single-purpose; if more
    server-rule overrides come up, each gets its own tiny mod rather than bloating
    this one.
+7. **Glue mod #6: `caero_specialization`** (designed 2026-04-29) — per-stack
+   item quality (data component) + player-owned refiner block + per-industry
+   skill levels. v1 ships fuel only (charcoal burn-time ladder, ash byproduct,
+   vanilla coal disabled via biome modifier). Forward design covers mining,
+   forestry, food, brewing — each producing a byproduct another industry
+   consumes (circular economy). Detailed plan + implementation order in
+   `glue/caero_specialization/PLAN.md`. Pillar trace: H1 (trade — refiners are
+   a service market) + H4 (specialize — per-industry XP gates quality output).
 
 Anti-goals: no forks, no world-gen rewrites, no custom economy mod, no custom
 minimap.

@@ -90,6 +90,7 @@ Plan: `glue/caero_claims/PLAN.md`. Supersedes the design-only
 | **Farmer's Delight** | `1.21.1-1.2.11a` | NeoForge | 2026-04-20 | [Modrinth](https://modrinth.com/mod/farmers-delight) |
 | **Create: Confectionery** | `1.1.2` | NeoForge | 2025-05-04 | [Modrinth](https://modrinth.com/mod/create-confectionery) |
 | **Nutritional Balance** | `1.21.1-7.0.2` | NeoForge | 2026-03-19 | [Modrinth](https://modrinth.com/mod/nutritional-balance) |
+| **Create: Fishing Bobber Detector** | `1.0.3` | NeoForge | 2026-04-30 | [Modrinth](https://modrinth.com/mod/create-fishing-bobber-detector) |
 
 **Roles:**
 - **Tough as Nails:** thirst + body temperature + hypo/hyperthermia. Makes outer
@@ -102,6 +103,14 @@ Plan: `glue/caero_claims/PLAN.md`. Supersedes the design-only
 - **Nutritional Balance:** **the "can't just spam bread" piece.** Eating only carbs
   (e.g., only bread) gives debuffs; varied diet gives buffs. Auto-derives food
   nutrients from crafting recipes — no manual tagging. Supports heuristics #1 + #4.
+- **Create: Fishing Bobber Detector:** single block that emits redstone when a
+  fishing-rod bobber inside its range gets a bite. Designed for Create
+  Deployer rigs — one Deployer casts, the detector fires on bite, a second
+  Deployer reels in. Vanilla loot table (cod / salmon / pufferfish / tropical_fish
+  + treasure / junk). Output feeds straight into our `caero_specialization`
+  fishing refiner (v1.5). Soft-depends on Create (the jar loads without it but
+  ships `data/create/tags/block/wrench_pickup.json` for wrench compatibility).
+  Verified at `.research/automated-fishing/`.
 
 ### Optional (not yet confirmed)
 - **Serene Seasons** `10.1.0.3-beta` — ties crop growth to seasons. Would reinforce
@@ -111,6 +120,30 @@ Plan: `glue/caero_claims/PLAN.md`. Supersedes the design-only
 ### Evaluated and rejected
 - **Diet**, **Spice of Life: Carrot Edition** — food-variety mods not available on
   1.21.1 NeoForge. Nutritional Balance covers their niche.
+
+---
+
+## Death handling
+
+| Mod | Latest 1.21.1 | Loader | Date | Source |
+|---|---|---|---|---|
+| **Gravestone Mod** (Henkelmax) | `1.21.1-1.0.35` | NeoForge | 2025-10-12 | [Modrinth](https://modrinth.com/mod/gravestone-mod) |
+
+**Why:** outer biomes are designed to be lethal (heuristic #3). Without a recovery
+loop, total inventory wipe on death makes far travel un-attempted — the danger
+curve becomes punishing rather than rewarding. Gravestone preserves inventory in
+a block at the death site; the player must trek back to retrieve it. Combined
+with `caero_rings`' `DeathPreserve.kt` (food/thirst capped to 3 on respawn),
+death still costs time and creates a vulnerable window — it just doesn't end the
+run. Supports H3 (lethality stays viable) and indirectly H1/H2 (players willing
+to travel = trade and transport demand).
+
+**Notes:**
+- Both client + server required (`side = "BOTH"` in `neoforge.mods.toml`).
+- No hard deps beyond NeoForge + Minecraft. Jade integration is optional.
+- 8.3M downloads on Modrinth, actively maintained by Henkelmax (also Simple Voice
+  Chat — same author already in our stack).
+- Evidence: `.research/mods-2026-04-28/gravestone-mod-versions.json`.
 
 ---
 
@@ -125,6 +158,16 @@ Plan: `glue/caero_claims/PLAN.md`. Supersedes the design-only
 Dawn of Time + Refurbished Furniture together cover Beth/Corey's canonical builds (Roman emblems, themed decoration, crates/chairs/tables). Both **client + server required** — players who join without them will see chunks render as "ghost holes" where those blocks should be. Fusion provides connected-texture support for visual quality. Added 2026-04-26 after first boot warned about missing block IDs in the world data.
 
 Known issue: `dawnoftimebuilder:white_cushion` recipe is malformed in 1.6.4 (missing `id` key in result spec) — block works, recipe doesn't. Worth filing upstream.
+
+---
+
+## Vanilla feature backports
+
+| Mod | Latest 1.21.1 | Loader | Date | Source |
+|---|---|---|---|---|
+| **Backport Copper Age** (Smallinger) | `1.21.1-0.1.4` | NeoForge | 2025-12-01 | [Modrinth](https://modrinth.com/mod/backport-copper-age) |
+
+**Why:** brings the 1.22+ Copper Age content (Copper Golem, copper chains/bars/lanterns/torches/grates/bulbs, oxidation) back to 1.21.1. Drops new construction palettes into the world without requiring a Minecraft version jump, and the Copper Golem gives players a craftable utility mob — pairs naturally with Create automation (item-sorting use case). Pure vanilla-style content, no config needed. Both client + server required (registers blocks/items/entity). Project + jar archived under `.research/copper-age-backport/`.
 
 ---
 
@@ -249,6 +292,13 @@ These aren't third-party mods, but they're part of the authoritative mod/rule st
 - **Player-built nether portals disabled.** Glue Mod #4 (see `glue/no-player-portals/`
   when built) cancels `BlockEvent.PortalSpawnEvent`. Admin pre-places 3–5 large portals
   by hand in chosen biomes during world setup.
+- **Chest minecart crafting disabled** (2026-04-28). `caero_rings` ships a
+  `data/minecraft/recipe/chest_minecart.json` override with the NeoForge `false`
+  condition. Plain `minecart` and rails stay craftable. Same in-tree pattern is
+  also used to disable all wooden boats, all chest-boat variants, bamboo rafts,
+  and `shulker_box` — see `glue/ring-biomes/src/main/resources/data/minecraft/recipe/`.
+  H2 (transport pillar): rail cargo competes with airships; portable bulk storage
+  flattens distance.
 
 See PLAN.md §4c for rationale.
 

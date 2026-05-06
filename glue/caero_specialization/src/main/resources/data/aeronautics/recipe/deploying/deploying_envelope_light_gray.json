@@ -1,0 +1,21 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "type": "caero_specialization:quality_gated",
+      "base": {
+        "item": "minecraft:light_gray_wool"
+      },
+      "min_quality": "high"
+    },
+    {
+      "item": "minecraft:stick"
+    }
+  ],
+  "results": [
+    {
+      "count": 3,
+      "id": "aeronautics:light_gray_envelope"
+    }
+  ]
+}

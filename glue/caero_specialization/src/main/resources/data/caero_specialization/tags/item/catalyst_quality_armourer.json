@@ -1,0 +1,39 @@
+{
+  "replace": false,
+  "values": [
+    "caero_specialization:fish_scale",
+    "caero_specialization:beast_carapace",
+    {
+      "id": "hybrid-aquatic:coconut_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:dungeness_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:fiddler_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:flower_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:ghost_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:karkinos_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:lightfoot_crab_claw",
+      "required": false
+    },
+    {
+      "id": "hybrid-aquatic:lobster_claw",
+      "required": false
+    }
+  ]
+}

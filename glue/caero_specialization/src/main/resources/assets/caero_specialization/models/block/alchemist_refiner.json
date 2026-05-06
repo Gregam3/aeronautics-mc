@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "caero_specialization:block/alchemist_refiner_side",
+    "down":     "minecraft:block/cobblestone",
+    "up":       "minecraft:block/cauldron_top",
+    "north":    "caero_specialization:block/alchemist_refiner_side",
+    "south":    "caero_specialization:block/alchemist_refiner_side",
+    "east":     "caero_specialization:block/alchemist_refiner_side",
+    "west":     "caero_specialization:block/alchemist_refiner_side"
+  }
+}

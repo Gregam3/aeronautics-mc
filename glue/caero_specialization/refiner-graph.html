@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Caero Specialization — refiner loop map</title>
+<style>
+  :root {
+    --bg: #16181d;
+    --panel: #1f2229;
+    --panel-edge: #2e323b;
+    --ink: #e3e6ec;
+    --muted: #8a909b;
+    --industry: #c9742d;
+    --industry-edge: #7a4413;
+    --alchemist-accent: #b078d9;
+    --byp: #e3b441;
+    --byp-edge: #8a6918;
+    --byp-new: #c98a2d;
+    --loop: #d68a3f;
+    --proposed-byp: #f4d35e;
+    --proposed-main: #5fb3c2;
+  }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--ink);
+               font-family: -apple-system, system-ui, "Segoe UI", sans-serif; overflow: hidden; }
+  header { padding: 10px 18px; border-bottom: 1px solid var(--panel-edge);
+           display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; z-index: 30; position: relative; }
+  header h1 { font-size: 14px; margin: 0; font-weight: 600; letter-spacing: 0.2px; }
+  header .sub { font-size: 11px; color: var(--muted); }
+  #legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted);
+            align-items: center; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+            vertical-align: middle; margin-right: 5px; border: 1px solid rgba(0,0,0,0.4); }
+  .toggles { display: flex; gap: 14px; font-size: 11px; padding-left: 12px;
+             border-left: 1px solid var(--panel-edge); align-items: center; }
+  .toggles label { display: flex; align-items: center; gap: 4px; cursor: pointer;
+                   user-select: none; color: var(--ink); }
+  .toggles input { accent-color: var(--proposed-byp); }
+  .reset-btn { font-size: 11px; padding: 3px 8px; border-radius: 3px;
+               background: var(--panel); color: var(--ink); border: 1px solid var(--panel-edge);
+               cursor: pointer; }
+  .reset-btn:hover { background: var(--panel-edge); }
+
+  #viewport { position: relative; width: 100%; height: calc(100vh - 56px);
+              overflow: hidden; cursor: grab; user-select: none; }
+  #viewport.dragging { cursor: grabbing; }
+  #stage { position: absolute; top: 0; left: 0;
+           width: 1600px; height: 880px; transform-origin: 0 0; }
+  #edges { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+
+  .card { position: absolute; box-sizing: border-box; width: 188px; min-height: 96px;
+          padding: 10px 12px; border-radius: 10px;
+          background: var(--industry); border: 1px solid var(--industry-edge);
+          color: #fff; cursor: pointer; z-index: 3;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+          transition: transform 0.12s ease, box-shadow 0.12s ease; }
+  .card:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+  .card.alchemist { background: linear-gradient(135deg, var(--industry) 0%, var(--alchemist-accent) 140%);
+                    border-color: var(--alchemist-accent); }
+  .card .name { font-weight: 700; font-size: 13px; letter-spacing: 0.4px;
+                margin-bottom: 5px; display: flex; justify-content: space-between;
+                align-items: center; gap: 6px; }
+  .card .badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 8px;
+                 background: var(--alchemist-accent); color: #fff; letter-spacing: 0.4px;
+                 white-space: nowrap; }
+  .card .row { font-size: 10.5px; line-height: 1.45; margin: 1px 0;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .row .k { display: inline-block; width: 26px; opacity: 0.75; font-weight: 600; }
+  .card .row.in  .k { color: #cfe2f5; }
+  .card .row.out .k { color: #cfeed8; }
+  .card .row.byp .k { color: #f4dc9a; }
+  .card .row.byp.empty { opacity: 0.55; font-style: italic; }
+
+  .byp-chip { position: absolute; box-sizing: border-box; z-index: 2;
+              cursor: pointer; transform: translate(-50%, -50%); text-align: center; }
+  .byp-chip .pill { display: inline-flex; align-items: center; gap: 4px;
+                    padding: 4px 10px; border-radius: 14px;
+                    font-size: 11px; font-weight: 600; color: #2a1f08;
+                    background: var(--byp); border: 1px solid var(--byp-edge);
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3); white-space: nowrap; }
+  .byp-chip .pill .refine { font-size: 8.5px; opacity: 0.7; padding-left: 4px;
+                            border-left: 1px solid rgba(0,0,0,0.25); }
+  .byp-chip .pill.new { border-style: dashed; border-color: #fff;
+                        background: var(--byp-new); color: #fff; position: relative; }
+  .byp-chip .pill.new::after { content: "NEW"; position: absolute; top: -7px; right: -10px;
+                               background: #c93d3d; color: #fff; font-size: 8px;
+                               padding: 1px 4px; border-radius: 3px; letter-spacing: 0.4px;
+                               font-weight: 700; }
+  .byp-chip .pill.new .refine { border-left-color: rgba(255,255,255,0.4); opacity: 0.85; }
+  .byp-chip .pill.wild { background: #6cc18a; border-color: #2a6e3f; color: #0e1015;
+                          position: relative; }
+  .byp-chip .pill.wild::before { content: "🌿"; font-size: 9px; margin-right: 2px; }
+  .byp-chip .pill.wild::after { content: "MOB"; position: absolute; top: -7px; right: -10px;
+                                 background: #2a6e3f; color: #fff; font-size: 8px;
+                                 padding: 1px 4px; border-radius: 3px; letter-spacing: 0.4px;
+                                 font-weight: 700; }
+  .byp-chip .dest { display: block; margin-top: 4px; font-size: 9.5px; color: var(--muted);
+                    line-height: 1.3; max-width: 220px; }
+  .byp-chip .dest b { color: var(--proposed-byp); font-weight: 600; }
+  .byp-chip:hover .pill { filter: brightness(1.12); }
+
+  #detail { position: absolute; right: 16px; top: 70px; width: 360px; max-height: 80vh;
+            overflow-y: auto;
+            background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 8px;
+            padding: 14px 16px; font-size: 12px; line-height: 1.5;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none; z-index: 25; }
+  #detail h3 { margin: 0 0 4px; font-size: 14px; }
+  #detail .key { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+  #detail h4 { margin: 12px 0 4px; font-size: 12px; color: var(--muted);
+               text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+  #detail ul { margin: 4px 0 0; padding-left: 18px; }
+  #detail li { margin: 2px 0; }
+  #detail .close { float: right; cursor: pointer; color: var(--muted);
+                   font-size: 18px; line-height: 1; }
+  #detail .close:hover { color: var(--ink); }
+  #detail code { background: #0e1015; padding: 1px 5px; border-radius: 3px;
+                 font-size: 11px; }
+  #detail .multiplier { background: #0e1015; border: 1px solid var(--panel-edge);
+                        padding: 8px 10px; border-radius: 4px; margin-top: 6px; }
+  #detail .multiplier table { border-collapse: collapse; font-size: 11px; }
+  #detail .multiplier td { padding: 1px 8px 1px 0; }
+
+  .hint { position: absolute; left: 16px; bottom: 12px; color: var(--muted);
+          font-size: 11px; pointer-events: none; z-index: 10; }
+
+  /* visibility toggles */
+  body.hide-existing path.layer-existing,
+  body.hide-existing rect.layer-existing,
+  body.hide-existing text.layer-existing { display: none; }
+  body.hide-byp path.layer-byp,
+  body.hide-byp rect.layer-byp,
+  body.hide-byp text.layer-byp { display: none; }
+  body.hide-main path.layer-main,
+  body.hide-main rect.layer-main,
+  body.hide-main text.layer-main { display: none; }
+  body.hide-emit path.layer-emit { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Caero Specialization — refiner loop map</h1>
+  <div id="legend">
+    <span><i class="swatch" style="background:var(--industry)"></i>refiner</span>
+    <span><i class="swatch" style="background:var(--byp)"></i>refiner byproduct</span>
+    <span><i class="swatch" style="background:var(--byp-new); border-style:dashed; border-color:#fff"></i>new refiner byp</span>
+    <span><i class="swatch" style="background:#6cc18a; border-color:#2a6e3f"></i>mob drop (HUNTER)</span>
+  </div>
+  <div class="toggles">
+    <label><input type="checkbox" id="t-existing" checked> <span style="color:var(--loop)">existing flow</span></label>
+    <label><input type="checkbox" id="t-emit" checked> <span style="color:var(--byp)">emission</span></label>
+    <label><input type="checkbox" id="t-byp" checked> <span style="color:var(--proposed-byp)">byproduct → consumer</span></label>
+    <label><input type="checkbox" id="t-main" checked> <span style="color:var(--proposed-main)">main-output catalyst</span></label>
+  </div>
+  <button class="reset-btn" id="reset-view">reset view</button>
+</header>
+
+<div id="viewport">
+  <div id="stage">
+    <svg id="edges" viewBox="0 0 1600 880">
+      <defs>
+        <marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--loop)"/>
+        </marker>
+        <marker id="arrow-emit" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--byp)"/>
+        </marker>
+        <marker id="arrow-byp" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--proposed-byp)"/>
+        </marker>
+        <marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--proposed-main)"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+  <div class="hint">drag to pan · scroll to zoom · click cards / chips</div>
+</div>
+
+<aside id="detail">
+  <span class="close" onclick="document.getElementById('detail').style.display='none'">×</span>
+  <div id="detail-body"></div>
+</aside>
+
+<script>
+// ============================================================================
+// SOURCE OF TRUTH
+// ============================================================================
+
+const INDUSTRIES = [
+  { id: "forestry",  name: "FORESTRY",
+    inSummary:  "charcoal · coal",
+    outSummary: "quality-stamped fuel",
+    byproducts: [{ name: "ash", proposed: false }],
+    qualityEffect: "burn-time multiplier on refined fuel",
+    inFull: ["minecraft:charcoal", "minecraft:coal"],
+    outFull: ["same registry id + caero_specialization:quality stamp"],
+  },
+  { id: "mining",    name: "MINING",
+    inSummary:  "raw iron / gold / copper / zinc",
+    outSummary: "quality-stamped raw ore",
+    byproducts: [{ name: "slag", proposed: true }],
+    qualityEffect: "smelt yield (1 / 1.5 / 2 / 3 ingots per ore)",
+    inFull: ["minecraft:raw_iron", "minecraft:raw_gold", "minecraft:raw_copper",
+             "create:raw_zinc (optional)"],
+    outFull: ["same registry id + quality stamp"],
+  },
+  { id: "jewelery",  name: "JEWELERY",
+    inSummary:  "refined ore · tools (salvage)",
+    outSummary: "gems · raw ingots (UNREFINED) · ore_dust",
+    byproducts: [{ name: "ore_dust", proposed: true }],
+    qualityEffect: "gem-tier roll skew (HIGH ore → rarer gems)",
+    inFull: ["quality-stamped raw_iron / raw_gold / raw_copper / raw_zinc (gem-crack)",
+             "iron / gold / diamond / netherite tools + armour (salvage)"],
+    outFull: ["TOPAZ / SAPPHIRE / RUBY / EMERALD (quality-stamped, tier-gated)",
+             "raw_iron / raw_gold / diamond / netherite_scrap (UNREFINED, from salvage)",
+             "1 ore_dust per gem-crack (quality-stamped from jeweler level) — feeds MINING"],
+  },
+  { id: "armourer",  name: "ARMOURER",
+    inSummary:  "tools · armour (all 6 tiers)",
+    outSummary: "quality + durability gear",
+    byproducts: [{ name: "filings", proposed: true }],
+    qualityEffect: "MAX_DAMAGE scaled · 0–100 quality_score → attribute boosts",
+    inFull: ["wooden / stone / iron / golden / diamond / netherite",
+             "sword · pickaxe · axe · shovel · hoe",
+             "helmet · chestplate · leggings · boots", "shears"],
+    outFull: ["preserves enchantments / damage / custom name",
+             "quality_score 0–100 stamped on top of tier"],
+  },
+  { id: "husbandry", name: "HUSBANDRY",
+    inSummary:  "crops · meat · hides · eggs",
+    outSummary: "quality-stamped food",
+    byproducts: [{ name: "tallow", proposed: true, condition: "meat refines only" }],
+    qualityEffect: "saturation × duration on food / use count on hides",
+    inFull: ["wheat, carrot, potato, beetroot, melon, apple, berries, pumpkin",
+             "raw beef/pork/chicken/mutton/rabbit/cod/salmon/tropical_fish",
+             "bread, cookie, pumpkin_pie",
+             "leather, rabbit_hide, feather, egg"],
+    outFull: ["same registry id + quality stamp"],
+  },
+  { id: "alchemist", name: "ALCHEMIST",
+    inSummary:  "potions · any byproduct",
+    outSummary: "quality potions · refined byproducts",
+    byproducts: [],
+    refines: true,
+    qualityEffect: "potion potency × duration · byproduct catalyst strength multiplier",
+    inFull: ["minecraft:potion / splash_potion / lingering_potion",
+             "any quality-stamped byproduct (ash, slag, filings, tallow, fish_*, mob drops)"],
+    outFull: ["potion: same id + quality stamp",
+             "byproduct: same id + bumped quality stamp (UNREFINED → LOW → MEDIUM → HIGH)"],
+  },
+  { id: "fishing",   name: "HUNTER",   // skill kind id stays "fishing" for code-compat
+    inSummary:  "fish (destructive) · mob drops (passive)",
+    outSummary: "fish byproducts · world-sourced mob byproducts",
+    byproducts: [
+      // refiner-emitted (existing)
+      { name: "fish_eye",   proposed: false, source: "refiner" },
+      { name: "fish_scale", proposed: false, source: "refiner" },
+      { name: "fish_oil",   proposed: false, source: "refiner" },
+      // wild — drops from killed mobs in the world (no refiner step)
+      { name: "crab_claw",       proposed: true, source: "wild" },
+      { name: "infernal_ember",  proposed: true, source: "wild" },
+      { name: "monster_skin",    proposed: true, source: "wild" },
+      { name: "chaos_seed",      proposed: true, source: "wild" },
+    ],
+    qualityEffect: "per-byproduct quality roll (HIGH-tier byproducts at high level) · mob drops emit UNREFINED",
+    inFull: ["fish: minecraft cod/salmon/tropical_fish/pufferfish + #c:foods/raw_fishes + hybrid-aquatic size tags",
+             "mob kills (passive collection — drops directly):",
+             "  · HA crabs → coconut/dungeness/fiddler/ghost/flower crab claws",
+             "  · BIC infernal_spirit + pumpkinhead → smoldering_infernal_ember",
+             "  · BIC dread_hound + krampus → monster_skin",
+             "  · BIC chaos knights + bonescaller → seedof_chaos"],
+    outFull: ["fish flow (existing): fish fully consumed → eye/scale/oil at hunter-level quality",
+             "mob flow (new): drops are vanilla world drops — no refiner step, comes out UNREFINED",
+             "all byproducts can be alchemist-refined for stronger consumer effect"],
+  },
+];
+
+const INTER_FLOWS = [
+  { from: "armourer", to: "jewelery", note: "tools / armour fed in for salvage" },
+  { from: "jewelery", to: "mining",   note: "salvaged raw ingots (UNREFINED) loop back as mining input" },
+  { from: "mining",   to: "jewelery", note: "refined raw ore feeds the gem-crack path" },
+];
+
+// PROPOSED — byproduct → consumer industry. Effect strength scales with the
+// byproduct's quality (UNREFINED 1.0× → HIGH 2.0×) — alchemist-refining is
+// what bumps that quality.
+const BYP_FLOWS = [
+  // existing byproducts
+  { byp: "ash",        from: "forestry",  to: "mining",    effect: "flux — ore-refine quality skew" },
+  { byp: "ash",        from: "forestry",  to: "husbandry", effect: "potash — crop-refine quality skew" },
+  { byp: "fish_eye",   from: "fishing",   to: "alchemist", effect: "potency reagent (potion-era ingredient)" },
+  { byp: "fish_scale", from: "fishing",   to: "armourer",  effect: "scale plating — quality_score boost" },
+  { byp: "fish_oil",   from: "fishing",   to: "forestry",  effect: "oil-cured charcoal — burn-time multiplier" },
+  // proposed refiner byproducts
+  { byp: "slag",       from: "mining",    to: "forestry",  effect: "slag-coke — bonus ash + burn time", proposed: true },
+  { byp: "slag",       from: "mining",    to: "armourer",  effect: "metal filler — quantity boost on tools", proposed: true },
+  { byp: "filings",    from: "armourer",  to: "jewelery",  effect: "metal inlay — boosts gem-tier roll", proposed: true },
+  { byp: "ore_dust",   from: "jewelery",  to: "mining",    effect: "concentrate — chance of +1 ore per smelt-yield (closes JEWELERY ↔ MINING loop)", proposed: true },
+  { byp: "tallow",     from: "husbandry", to: "alchemist", effect: "stabilizer (potion-era ingredient)", proposed: true },
+  // proposed mob drops (HUNTER, wild-sourced)
+  { byp: "crab_claw",      from: "fishing", to: "armourer",  effect: "chitinous plating — quality_score boost on armour", proposed: true },
+  { byp: "infernal_ember", from: "fishing", to: "forestry",  effect: "ember-fired charcoal — burn-time multiplier", proposed: true },
+  { byp: "monster_skin",   from: "fishing", to: "husbandry", effect: "tough hide — quality skew on leather refines", proposed: true },
+  { byp: "chaos_seed",     from: "fishing", to: "jewelery",  effect: "chaos infusion — boosts gem-tier roll (rare)", proposed: true },
+];
+
+const MAIN_FLOWS = [
+  { from: "husbandry", to: "armourer", catalyst: "HIGH leather",     effect: "quality skew on light-armour refines" },
+  { from: "mining",    to: "armourer", catalyst: "HIGH refined ore", effect: "quality skew on metal-armour refines" },
+];
+
+const QUALITY_MULTIPLIERS = [
+  ["UNREFINED", "1.0× — full base effect (catalyst is fully useful raw)"],
+  ["LOW",       "1.1× — alchemist refined at low level"],
+  ["MEDIUM",    "1.25× — alchemist refined at mid level"],
+  ["HIGH",      "1.5× — alchemist refined at high level"],
+];
+
+const BYPRODUCT_INFO = {
+  ash:        { producer: "forestry", proposed: false,
+                note: "Forestry-only · rate = 0.25 + 0.0025·level (cap 100 → 50%) · TODO: stamp quality on emit (currently plain ItemStack)." },
+  fish_eye:   { producer: "fishing",  proposed: false,
+                note: "Per-roll quality stamp · potion ingredient when alchemist potions arrive." },
+  fish_scale: { producer: "fishing",  proposed: false,
+                note: "Highest base rate · armourer scale-plating reagent." },
+  fish_oil:   { producer: "fishing",  proposed: false,
+                note: "Pufferfish-heavy · forestry oil-cured charcoal." },
+  slag:       { producer: "mining",   proposed: true,
+                note: "NEW — small chance per ore refine. Texture borrow: gunpowder grey." },
+  filings:    { producer: "armourer", proposed: true,
+                note: "NEW — small chance per gear refine. Texture borrow: iron nugget tinted." },
+  tallow:     { producer: "husbandry",proposed: true,
+                note: "NEW — meat refines only. Texture borrow: honey bottle pale." },
+  ore_dust:   { producer: "jewelery", proposed: true,
+                note: "NEW — 1 emitted per JEWELERY gem-crack, quality-stamped from jeweler level. Closes the JEWELERY ↔ MINING loop tightly: mining feeds gem-crack inputs, gem-crack feeds back ore_dust as MINING amplifier (+1 ore chance per smelt). Texture borrow: vanilla redstone." },
+  // wild — sourced from mob kills, not from a refiner
+  crab_claw:      { producer: "fishing", proposed: true, wild: true,
+                    note: "WILD drop — represents tag #caero_specialization:catalyst_chitinous covering hybrid-aquatic crab claws (coconut, dungeness, fiddler, ghost, flower)." },
+  infernal_ember: { producer: "fishing", proposed: true, wild: true,
+                    note: "WILD drop — born_in_chaos_v1:smoldering_infernal_ember. Drops from BIC infernal_spirit, pumpkinhead, possibly seared_spirit." },
+  monster_skin:   { producer: "fishing", proposed: true, wild: true,
+                    note: "WILD drop — born_in_chaos_v1:monster_skin. Drops from BIC dread_hound, krampus, lifestealer, several others." },
+  chaos_seed:     { producer: "fishing", proposed: true, wild: true,
+                    note: "WILD drop — born_in_chaos_v1:seedof_chaos. Drops from BIC fallen_chaos_knight, bonescaller, chaos bosses. Rare → high catalyst value." },
+};
+
+// ============================================================================
+// LAYOUT — wide oval. Industries on outer ellipse, byproducts on inner.
+// ============================================================================
+
+const STAGE_W = 1600, STAGE_H = 880;
+const CX = STAGE_W / 2, CY = STAGE_H / 2;
+const OUTER_A = 670, OUTER_B = 340;   // outer ellipse radii (industries)
+const INNER_A = 360, INNER_B = 170;   // inner ellipse radii (byproducts)
+const N = INDUSTRIES.length;
+
+function angleFor(i) { return -Math.PI / 2 + (i * 2 * Math.PI / N); }
+function ellipsePos(angle, a, b) {
+  return { x: CX + a * Math.cos(angle), y: CY + b * Math.sin(angle), a: angle };
+}
+
+const stage = document.getElementById("stage");
+const svg = document.getElementById("edges");
+
+// --- consumer-summary lookup: byproduct → list of consumer industry IDs ---
+const consumerSummary = {};
+BYP_FLOWS.forEach(f => {
+  if (!consumerSummary[f.byp]) consumerSummary[f.byp] = [];
+  consumerSummary[f.byp].push(f.to.toUpperCase());
+});
+
+// --- render industry cards (outer ellipse) ---
+const cardEls = {};
+INDUSTRIES.forEach((ind, i) => {
+  const p = ellipsePos(angleFor(i), OUTER_A, OUTER_B);
+  const el = document.createElement("div");
+  el.className = "card" + (ind.id === "alchemist" ? " alchemist" : "");
+  el.style.left = (p.x - 94) + "px";
+  el.style.top  = (p.y - 48) + "px";
+  const bypList = ind.byproducts.length
+    ? ind.byproducts.map(b => b.name + (b.proposed ? " ⊕" : "")).join(" · ")
+    : (ind.refines ? "(refinement service)" : "(exports via main output)");
+  el.innerHTML = `
+    <div class="name">
+      <span>${ind.name}</span>
+      ${ind.refines ? '<span class="badge">↻ refines all byproducts</span>' : ''}
+    </div>
+    <div class="row in"><span class="k">in</span>${ind.inSummary}</div>
+    <div class="row out"><span class="k">out</span>${ind.outSummary}</div>
+    <div class="row byp ${ind.byproducts.length ? "" : "empty"}">
+      <span class="k">byp</span>${bypList}
+    </div>
+  `;
+  el.addEventListener("click", () => showIndustry(ind));
+  stage.appendChild(el);
+  cardEls[ind.id] = { el, x: p.x, y: p.y, angle: p.a };
+});
+
+// --- render byproduct chips (inner ellipse, near producer's angle) ---
+const chipEls = {};
+INDUSTRIES.forEach((ind, i) => {
+  if (!ind.byproducts.length) return;
+  const baseAngle = angleFor(i);
+  // Tighten angular spread when there are many byproducts (HUNTER has 7).
+  const n = ind.byproducts.length;
+  const angularSpread = n <= 1 ? 0 : n <= 3 ? 0.18 : n <= 5 ? 0.13 : 0.10;
+  // Stagger inner radius for HUNTER's fan (alternating chips inside/outside).
+  const radiusStaggerEnabled = n >= 4;
+  ind.byproducts.forEach((byp, k) => {
+    const offsetAngle = (k - (n - 1) / 2) * angularSpread;
+    const a = baseAngle + offsetAngle;
+    // Stagger: even-index chips on inner ring, odd-index pushed slightly outward
+    const radialBoost = radiusStaggerEnabled ? (k % 2 === 0 ? 0 : 60) : 0;
+    const p = ellipsePos(a, INNER_A + radialBoost, INNER_B + radialBoost * 0.6);
+
+    const dests = consumerSummary[byp.name] || [];
+    const destText = dests.length
+      ? `give to: <b>${dests.join("</b> · <b>")}</b>`
+      : `<i>no consumer</i>`;
+
+    const isWild = byp.source === "wild";
+    const pillClass = isWild ? "wild" : (byp.proposed ? "new" : "");
+
+    const wrap = document.createElement("div");
+    wrap.className = "byp-chip";
+    wrap.style.left = p.x + "px";
+    wrap.style.top  = p.y + "px";
+    wrap.innerHTML = `
+      <span class="pill ${pillClass}">
+        ${byp.name}
+        <span class="refine" title="alchemist can refine for stronger effect">↻</span>
+      </span>
+      <span class="dest">${destText}</span>
+    `;
+    wrap.addEventListener("click", () => showByproduct(byp.name, ind));
+    stage.appendChild(wrap);
+    chipEls[byp.name + "@" + ind.id] = { el: wrap, x: p.x, y: p.y, source: ind.id, name: byp.name, wild: isWild };
+  });
+});
+
+// Convenience: lookup chip by byproduct name (some names like "ash" only have one chip).
+function chipForByp(name) {
+  return Object.values(chipEls).find(c => c.name === name);
+}
+
+// ============================================================================
+// EDGES
+// ============================================================================
+
+function cardEdge(centre, towardX, towardY) {
+  const dx = towardX - centre.x, dy = towardY - centre.y;
+  if (dx === 0 && dy === 0) return centre;
+  const halfW = 94, halfH = 48;
+  const sX = halfW / Math.abs(dx || 1e-6);
+  const sY = halfH / Math.abs(dy || 1e-6);
+  const s  = Math.min(sX, sY);
+  return { x: centre.x + dx * s, y: centre.y + dy * s };
+}
+
+function arrow({ x1, y1, x2, y2, color, marker, dasharray, width, layer, bow = 0, label = "" }) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const dx = x2 - x1, dy = y2 - y1;
+  const nlen = Math.hypot(dx, dy) || 1;
+  const nx = -dy / nlen, ny = dx / nlen;
+  const cx = mx + nx * bow, cy = my + ny * bow;
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", color);
+  path.setAttribute("stroke-width", width);
+  if (dasharray) path.setAttribute("stroke-dasharray", dasharray);
+  if (marker) path.setAttribute("marker-end", `url(#${marker})`);
+  if (layer) path.classList.add(`layer-${layer}`);
+  svg.appendChild(path);
+
+  if (label) {
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.textContent = label;
+    text.setAttribute("x", cx);
+    text.setAttribute("y", cy);
+    text.setAttribute("fill", color);
+    text.setAttribute("font-size", "9");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dy", "0.32em");
+    if (layer) text.classList.add(`layer-${layer}`);
+    svg.appendChild(text);
+    const bbox = text.getBBox();
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", bbox.x - 3);
+    bg.setAttribute("y", bbox.y - 1);
+    bg.setAttribute("width", bbox.width + 6);
+    bg.setAttribute("height", bbox.height + 2);
+    bg.setAttribute("fill", "var(--bg)");
+    bg.setAttribute("rx", "2");
+    if (layer) bg.classList.add(`layer-${layer}`);
+    svg.insertBefore(bg, text);
+  }
+}
+
+// existing in-code flows (orange, between industry cards)
+INTER_FLOWS.forEach((flow) => {
+  const a = cardEls[flow.from], b = cardEls[flow.to];
+  const start = cardEdge(a, b.x, b.y);
+  const end   = cardEdge(b, a.x, a.y);
+  const sign = (flow.from === "mining" && flow.to === "jewelery") ? -1 : 1;
+  arrow({
+    x1: start.x, y1: start.y, x2: end.x, y2: end.y,
+    color: "var(--loop)", marker: "arrow-loop", width: "2.4",
+    bow: 26 * sign, layer: "existing",
+    label: `${flow.from} → ${flow.to}`,
+  });
+});
+
+// emission arrows: producer card → byproduct chip (yellow dotted, short inward)
+// Wild (mob-drop) chips skip the emission arrow — they aren't refiner-produced.
+INDUSTRIES.forEach((ind) => {
+  const card = cardEls[ind.id];
+  ind.byproducts.forEach((byp) => {
+    if (byp.source === "wild") return;
+    const chip = chipForByp(byp.name);
+    if (!chip || chip.source !== ind.id) return;
+    const start = cardEdge(card, chip.x, chip.y);
+    arrow({
+      x1: start.x, y1: start.y, x2: chip.x, y2: chip.y,
+      color: "var(--byp)", marker: "arrow-emit", width: "1.4",
+      dasharray: "3 3", layer: "emit",
+    });
+  });
+});
+
+// proposed byproduct → consumer (bright yellow, from inner chip out to outer card)
+BYP_FLOWS.forEach((f) => {
+  const chip = chipForByp(f.byp);
+  const target = cardEls[f.to];
+  if (!chip || !target) return;
+  const end = cardEdge(target, chip.x, chip.y);
+  // bow alternates so multi-target chips don't overlap their two arrows
+  const bowSign = (f.to.charCodeAt(0) % 2 === 0) ? 1 : -1;
+  arrow({
+    x1: chip.x, y1: chip.y, x2: end.x, y2: end.y,
+    color: "var(--proposed-byp)", marker: "arrow-byp", width: "1.6",
+    bow: 22 * bowSign, layer: "byp",
+  });
+});
+
+// proposed main-output catalyst (teal, between industry cards across the inside)
+MAIN_FLOWS.forEach((f, idx) => {
+  const a = cardEls[f.from], b = cardEls[f.to];
+  const start = cardEdge(a, b.x, b.y);
+  const end   = cardEdge(b, a.x, a.y);
+  const bow = (idx % 2 === 0 ? 1 : -1) * 70;
+  arrow({
+    x1: start.x, y1: start.y, x2: end.x, y2: end.y,
+    color: "var(--proposed-main)", marker: "arrow-main", width: "1.8",
+    dasharray: "6 4", bow, layer: "main",
+    label: f.catalyst,
+  });
+});
+
+// ============================================================================
+// DETAIL PANEL
+// ============================================================================
+const detail = document.getElementById("detail");
+const detailBody = document.getElementById("detail-body");
+
+function show(html) {
+  detailBody.innerHTML = html;
+  detail.style.display = "block";
+}
+
+function multiplierTable() {
+  return `<div class="multiplier"><table>${
+    QUALITY_MULTIPLIERS.map(([q, e]) => `<tr><td><b>${q}</b></td><td>${e}</td></tr>`).join("")
+  }</table></div>`;
+}
+
+function showIndustry(ind) {
+  const bypList = ind.byproducts.length
+    ? ind.byproducts.map(b => `${b.name}${b.proposed ? " (NEW)" : ""}${b.condition ? ` — ${b.condition}` : ""}`).join(", ")
+    : (ind.refines ? "<i>none — runs the byproduct refinement service</i>"
+                   : "<i>none — exports via main output</i>");
+
+  const incomingByp = BYP_FLOWS.filter(f => f.to === ind.id);
+  const incomingMain = MAIN_FLOWS.filter(f => f.to === ind.id);
+  const outgoingByp = BYP_FLOWS.filter(f => f.from === ind.id);
+  const outgoingMain = MAIN_FLOWS.filter(f => f.from === ind.id);
+
+  show(`
+    <h3>${ind.name}${ind.refines ? ' <span style="color:var(--alchemist-accent); font-size:11px">↻ byproduct refiner</span>' : ''}</h3>
+    <div class="key">refiner · skill kind: <code>${ind.id}</code></div>
+    <h4>Quality affects</h4><div>${ind.qualityEffect}</div>
+    ${ind.refines ? `<h4>Catalyst strength multiplier</h4>
+      <div>Byproducts work at full base effect when UNREFINED. The alchemist refines them to bump quality, which multiplies the consumer's effect:</div>
+      ${multiplierTable()}` : ""}
+    <h4>Accepts (input tag)</h4>
+    <ul>${ind.inFull.map(x => `<li>${x}</li>`).join("")}</ul>
+    <h4>Produces (main output)</h4>
+    <ul>${ind.outFull.map(x => `<li>${x}</li>`).join("")}</ul>
+    <h4>Byproduct</h4><div>${bypList}</div>
+    <h4>Catalysts in (proposed)</h4>
+    ${(incomingByp.length || incomingMain.length)
+      ? `<ul>
+          ${incomingByp.map(f => `<li><b>${f.byp}</b> from ${f.from} — ${f.effect}</li>`).join("")}
+          ${incomingMain.map(f => `<li><b>${f.catalyst}</b> from ${f.from} — ${f.effect}</li>`).join("")}
+         </ul>`
+      : "<div><i>none</i></div>"}
+    <h4>Catalysts out (proposed)</h4>
+    ${(outgoingByp.length || outgoingMain.length)
+      ? `<ul>
+          ${outgoingByp.map(f => `<li><b>${f.byp}</b> → ${f.to} — ${f.effect}</li>`).join("")}
+          ${outgoingMain.map(f => `<li><b>${f.catalyst}</b> → ${f.to} — ${f.effect}</li>`).join("")}
+         </ul>`
+      : "<div><i>none</i></div>"}
+  `);
+}
+
+function showByproduct(name, ind) {
+  const info = BYPRODUCT_INFO[name] || {};
+  const flows = BYP_FLOWS.filter(f => f.byp === name);
+  const sourceLabel = info.wild
+    ? `<span style="color:#6cc18a; font-size:11px">🌿 wild · mob drop</span>`
+    : `<span style="color:var(--byp); font-size:11px">refiner-emitted</span>`;
+  show(`
+    <h3>${name}${info.proposed ? ' <span style="color:#c93d3d; font-size:11px">NEW</span>' : ''}
+      ${sourceLabel}
+      <span style="color:var(--alchemist-accent); font-size:11px">↻ refinable at alchemist</span></h3>
+    <div class="key">${info.wild ? `dropped from world (HUNTER collects)` : `byproduct of <code>${ind.id}</code>`}</div>
+    <h4>Notes</h4><div>${info.note || "(no notes)"}</div>
+    <h4>Goes to (proposed consumers)</h4>
+    ${flows.length
+      ? `<ul>${flows.map(f => `<li>→ <b>${f.to.toUpperCase()}</b> — ${f.effect}</li>`).join("")}</ul>`
+      : "<div><i>none</i></div>"}
+    <h4>Effect strength by quality</h4>
+    ${multiplierTable()}
+  `);
+}
+
+document.addEventListener("click", (e) => {
+  if (!detail.contains(e.target) && !e.target.closest(".card") &&
+      !e.target.closest(".byp-chip")) {
+    detail.style.display = "none";
+  }
+});
+
+// --- toggles ---
+function bindToggle(checkboxId, bodyClass) {
+  const cb = document.getElementById(checkboxId);
+  cb.addEventListener("change", () => {
+    document.body.classList.toggle(bodyClass, !cb.checked);
+  });
+}
+bindToggle("t-existing", "hide-existing");
+bindToggle("t-emit",     "hide-emit");
+bindToggle("t-byp",      "hide-byp");
+bindToggle("t-main",     "hide-main");
+
+// ============================================================================
+// PAN + ZOOM
+// ============================================================================
+const viewport = document.getElementById("viewport");
+let panX = 0, panY = 0, zoom = 1;
+
+function applyTransform() {
+  stage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+
+function fitToView() {
+  const r = viewport.getBoundingClientRect();
+  // Pick zoom so the stage fits with a small margin
+  const zX = (r.width - 40) / STAGE_W;
+  const zY = (r.height - 40) / STAGE_H;
+  zoom = Math.min(zX, zY, 1);
+  panX = (r.width - STAGE_W * zoom) / 2;
+  panY = (r.height - STAGE_H * zoom) / 2;
+  applyTransform();
+}
+
+let isDragging = false, dragStart = null;
+viewport.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".card") || e.target.closest(".byp-chip") ||
+      e.target.closest("#detail")) return;
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY, panX, panY };
+  viewport.classList.add("dragging");
+  e.preventDefault();
+});
+window.addEventListener("mousemove", (e) => {
+  if (!isDragging) return;
+  panX = dragStart.panX + (e.clientX - dragStart.x);
+  panY = dragStart.panY + (e.clientY - dragStart.y);
+  applyTransform();
+});
+window.addEventListener("mouseup", () => {
+  isDragging = false;
+  viewport.classList.remove("dragging");
+});
+
+viewport.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const oldZoom = zoom;
+  const delta = -e.deltaY * 0.0015;
+  zoom = Math.max(0.25, Math.min(3, zoom * (1 + delta)));
+  // zoom toward cursor: keep cursor's stage-coord position fixed
+  const r = viewport.getBoundingClientRect();
+  const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  const ratio = zoom / oldZoom;
+  panX = cx - (cx - panX) * ratio;
+  panY = cy - (cy - panY) * ratio;
+  applyTransform();
+}, { passive: false });
+
+document.getElementById("reset-view").addEventListener("click", fitToView);
+window.addEventListener("resize", () => {
+  // only refit if we're at the auto-fit zoom; otherwise leave the user's view alone
+});
+
+fitToView();
+</script>
+</body>
+</html>

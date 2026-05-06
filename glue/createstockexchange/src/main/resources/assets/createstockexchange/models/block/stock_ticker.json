@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "createstockexchange:block/stock_ticker_top",
+    "side": "createstockexchange:block/stock_ticker"
+  }
+}

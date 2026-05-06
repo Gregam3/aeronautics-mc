@@ -42,6 +42,10 @@ object CaeroClaims {
         ClaimWandItem(props.stacksTo(1))
     }
 
+    val ADMIN_CLAIM_WAND = ITEMS.registerItem("admin_claim_wand") { props ->
+        ClaimWandItem(props.stacksTo(1).rarity(net.minecraft.world.item.Rarity.EPIC), isAdmin = true)
+    }
+
     @Suppress("unused")
     val CREATIVE_TAB = CREATIVE_TABS.register("main", Supplier {
         CreativeModeTab.builder()
@@ -49,6 +53,7 @@ object CaeroClaims {
             .icon { ItemStack(CLAIM_WAND.get()) }
             .displayItems { _, output ->
                 output.accept(CLAIM_WAND.get())
+                output.accept(ADMIN_CLAIM_WAND.get())
             }
             .build()
     })

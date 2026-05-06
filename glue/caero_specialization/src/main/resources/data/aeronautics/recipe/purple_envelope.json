@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "W": {
+      "type": "caero_specialization:quality_gated",
+      "base": {
+        "item": "minecraft:purple_wool"
+      },
+      "min_quality": "high"
+    }
+  },
+  "pattern": [
+    "WS",
+    "SW"
+  ],
+  "result": {
+    "count": 4,
+    "id": "aeronautics:purple_envelope"
+  }
+}

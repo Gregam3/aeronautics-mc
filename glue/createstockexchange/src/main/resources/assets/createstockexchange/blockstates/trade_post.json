@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "createstockexchange:block/trade_post" }
+  }
+}

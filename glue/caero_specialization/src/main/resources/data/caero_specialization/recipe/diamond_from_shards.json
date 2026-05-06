@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" },
+    { "item": "caero_specialization:diamond_shard" }
+  ],
+  "result": {
+    "id": "minecraft:diamond",
+    "count": 1
+  }
+}

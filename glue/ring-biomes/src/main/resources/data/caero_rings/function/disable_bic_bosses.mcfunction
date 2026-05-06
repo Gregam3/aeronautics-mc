@@ -1,0 +1,7 @@
+gamerule serPumpkinheadSpawn false
+gamerule lifestealerSpawn false
+gamerule spiritOfChaosSpawn false
+gamerule motherSpiderSpawn false
+gamerule fallenChaosKnightSpawn false
+gamerule theappearanceoftheNightmareStalker false
+gamerule krampusSpawn false

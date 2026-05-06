@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "caero_specialization:item/byproducts/fish_scale"
+  },
+  "overrides": [
+    { "predicate": { "caero_specialization:quality": 0.0 }, "model": "caero_specialization:item/fish_scale_unrefined" },
+    { "predicate": { "caero_specialization:quality": 0.3 }, "model": "caero_specialization:item/fish_scale_low" },
+    { "predicate": { "caero_specialization:quality": 0.6 }, "model": "caero_specialization:item/fish_scale_medium" },
+    { "predicate": { "caero_specialization:quality": 0.9 }, "model": "caero_specialization:item/fish_scale_high" }
+  ]
+}

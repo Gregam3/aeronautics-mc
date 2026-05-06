@@ -15,25 +15,28 @@
       "hard_substitution": "#caero_rings:tier_hard_common",
       "medium_min_radius": 1500,
       "hard_min_radius": 1500,
-      "_comment": "Voronoi picks nearest seed; *_min_radius fields then floor the tier so we guarantee an easy core even when a medium seed is closer than origin. medium_min_radius=1500 means no medium inside 1500 blocks; hard_min_radius=1500 means no hard inside 1500. Raise hard_min_radius (e.g. to 3000) if you want a dedicated medium ring before hard kicks in. Medium seeds hexagonal at r=2400; hard seeds hand-placed at r~4000.",
+      "floor_jitter": 600,
+      "_comment": "Voronoi picks nearest seed; *_min_radius fields then floor the tier so we guarantee an easy core. floor_jitter perturbs both floors via low-frequency value noise so the easy/medium boundary is wavy rather than a circle (effective radius ranges roughly [base-jitter, base+jitter]). Seed radii are deliberately spread across [1700, 4700] — easy core anchored at origin, medium seeds mostly at r ≈ 1700–2500 with two outer pockets near r ≈ 4000, hard seeds mostly at r ≈ 3700–4700 with two inner intrusions near r ≈ 3000. Net result: bias toward easy near spawn and hard at the edges, but the rings aren't concentric and same-radius cells can land in different tiers.",
       "seeds": [
         { "x":     0, "z":     0, "tier": "easy"   },
 
-        { "x":  2400, "z":     0, "tier": "medium" },
-        { "x":  1200, "z":  2078, "tier": "medium" },
-        { "x": -1200, "z":  2078, "tier": "medium" },
-        { "x": -2400, "z":     0, "tier": "medium" },
-        { "x": -1200, "z": -2078, "tier": "medium" },
-        { "x":  1200, "z": -2078, "tier": "medium" },
+        { "x":  1700, "z":   200, "tier": "medium" },
+        { "x":   800, "z":  1900, "tier": "medium" },
+        { "x": -1300, "z":  1500, "tier": "medium" },
+        { "x": -2200, "z":  -600, "tier": "medium" },
+        { "x":  -700, "z": -2300, "tier": "medium" },
+        { "x":  1900, "z": -1500, "tier": "medium" },
+        { "x": -3500, "z":  2300, "tier": "medium" },
+        { "x":  3500, "z": -2700, "tier": "medium" },
 
-        { "x":  4000, "z":   500, "tier": "hard"   },
-        { "x":  2500, "z":  3200, "tier": "hard"   },
-        { "x":  -800, "z":  4000, "tier": "hard"   },
-        { "x": -3500, "z":  2000, "tier": "hard"   },
-        { "x": -4000, "z":  -800, "tier": "hard"   },
-        { "x": -2000, "z": -3500, "tier": "hard"   },
-        { "x":  1500, "z": -3800, "tier": "hard"   },
-        { "x":  4000, "z": -2000, "tier": "hard"   }
+        { "x":  2700, "z":  1500, "tier": "hard"   },
+        { "x": -1700, "z": -3000, "tier": "hard"   },
+        { "x":  4200, "z":   800, "tier": "hard"   },
+        { "x":  2200, "z":  3700, "tier": "hard"   },
+        { "x": -2700, "z":  3500, "tier": "hard"   },
+        { "x": -4500, "z":  -700, "tier": "hard"   },
+        { "x": -3000, "z": -3300, "tier": "hard"   },
+        { "x":  1100, "z": -4500, "tier": "hard"   }
       ]
     }
   }

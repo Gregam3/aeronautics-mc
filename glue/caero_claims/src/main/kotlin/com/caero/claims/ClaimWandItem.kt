@@ -19,8 +19,12 @@ import net.minecraft.world.level.Level
  * the client sends on the second click. This `useOn` exists to play the swing
  * animation; vanilla block-interaction is suppressed by the wand-specific
  * handler in V1ProtectionHandlers (HIGHEST priority on both sides).
+ *
+ * When [isAdmin] is true the wand bypasses cost/balance/max-volume checks and
+ * registers the resulting claim under the admin sentinel UUID; usage is gated
+ * to op-level players in [com.caero.claims.service.ServerClaimService.armClaim].
  */
-class ClaimWandItem(properties: Properties) : Item(properties) {
+class ClaimWandItem(properties: Properties, val isAdmin: Boolean = false) : Item(properties) {
 
     override fun useOn(context: UseOnContext): InteractionResult {
         // Returning SUCCESS plays the swing on both client and server.
@@ -49,8 +53,9 @@ class ClaimWandItem(properties: Properties) : Item(properties) {
         tooltip: MutableList<Component>,
         flag: TooltipFlag,
     ) {
-        tooltip.add(Component.translatable("item.caero_claims.claim_wand.tooltip.line1").withStyle(ChatFormatting.GRAY))
-        tooltip.add(Component.translatable("item.caero_claims.claim_wand.tooltip.line2").withStyle(ChatFormatting.GRAY))
-        tooltip.add(Component.translatable("item.caero_claims.claim_wand.tooltip.line3").withStyle(ChatFormatting.DARK_GRAY))
+        val prefix = if (isAdmin) "item.caero_claims.admin_claim_wand" else "item.caero_claims.claim_wand"
+        tooltip.add(Component.translatable("$prefix.tooltip.line1").withStyle(ChatFormatting.GRAY))
+        tooltip.add(Component.translatable("$prefix.tooltip.line2").withStyle(ChatFormatting.GRAY))
+        tooltip.add(Component.translatable("$prefix.tooltip.line3").withStyle(ChatFormatting.DARK_GRAY))
     }
 }

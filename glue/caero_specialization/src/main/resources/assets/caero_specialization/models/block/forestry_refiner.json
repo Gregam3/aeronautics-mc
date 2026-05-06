@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "minecraft:block/smooth_stone",
+    "particle": "caero_specialization:block/forestry_refiner_side",
     "down":     "minecraft:block/smooth_stone",
-    "up":       "minecraft:block/smooth_stone",
-    "north":    "minecraft:block/stripped_oak_log",
-    "south":    "minecraft:block/smooth_stone",
-    "east":     "minecraft:block/smooth_stone",
-    "west":     "minecraft:block/smooth_stone"
+    "up":       "minecraft:block/stripped_oak_log_top",
+    "north":    "caero_specialization:block/forestry_refiner_side",
+    "south":    "caero_specialization:block/forestry_refiner_side",
+    "east":     "caero_specialization:block/forestry_refiner_side",
+    "west":     "caero_specialization:block/forestry_refiner_side"
   }
 }

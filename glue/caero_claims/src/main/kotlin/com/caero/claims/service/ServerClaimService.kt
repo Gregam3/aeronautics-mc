@@ -2,6 +2,7 @@ package com.caero.claims.service
 
 import com.caero.claims.CaeroClaims
 import com.caero.claims.config.CaeroClaimsConfig
+import com.caero.claims.data.ADMIN_OWNER_UUID
 import com.caero.claims.data.Claim
 import com.caero.claims.data.ClaimDimensionData
 import com.caero.claims.data.boundingBoxFromCorners
@@ -11,6 +12,7 @@ import com.caero.claims.net.ClaimRemovePacket
 import com.caero.claims.net.ClaimSummary
 import com.caero.claims.net.ClaimSyncPacket
 import com.caero.claims.net.ClaimUpdatePacket
+import com.caero.claims.pricing.ClaimPricing
 import dev.ithundxr.createnumismatics.Numismatics
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
@@ -39,6 +41,8 @@ import java.util.UUID
  */
 object ServerClaimService {
 
+    private const val ADMIN_OWNER_NAME = "Admin"
+
     /** Per-player pending claim — the corners between arm and confirm. */
     data class Pending(
         val a: BlockPos,
@@ -47,6 +51,7 @@ object ServerClaimService {
         val box: BoundingBox,
         val volume: Long,
         val costSpurs: Int,
+        val isAdmin: Boolean,
     )
 
     private val pending: MutableMap<UUID, Pending> = HashMap()
@@ -105,14 +110,25 @@ object ServerClaimService {
         data object VolumeTooLarge : ArmResult()
         data object Overlaps : ArmResult()
         data object InsufficientBalance : ArmResult()
+        data object NotPermitted : ArmResult()
     }
 
     /**
      * Stage [a]/[b] as a pending claim for [player]. Validates everything
      * except the actual debit; does not change persistent state. Sends an
      * action-bar message either way.
+     *
+     * When [isAdmin] is true the claim is registered under [ADMIN_OWNER_UUID]
+     * with no cost / max-volume / balance gating. Permission to use the admin
+     * wand is re-checked here — clients can't lie their way past it.
      */
-    fun armClaim(player: ServerPlayer, a: BlockPos, b: BlockPos): ArmResult {
+    fun armClaim(player: ServerPlayer, a: BlockPos, b: BlockPos, isAdmin: Boolean = false): ArmResult {
+        if (isAdmin && !player.hasPermissions(2)) {
+            actionBar(player, "Admin claim wand requires operator permission.", red = true)
+            sendPendingClear(player)
+            return ArmResult.NotPermitted
+        }
+
         val level = player.serverLevel()
         val data = ClaimDimensionData.get(level)
         val box = boundingBoxFromCorners(a, b)
@@ -129,49 +145,82 @@ object ServerClaimService {
         }
 
         val volume = box.volumeBlocks()
-        val maxVol = CaeroClaimsConfig.MAX_VOLUME_PER_CLAIM.get()
-        val existing = data.byOwner[player.uuid]?.let { data.claims[it]?.totalBlocks() } ?: 0L
-        if (existing + volume > maxVol) {
-            actionBar(player, "Claim would exceed max size ($maxVol blocks).", red = true)
-            sendPendingClear(player)
-            return ArmResult.VolumeTooLarge
+        val ownerUuid = if (isAdmin) ADMIN_OWNER_UUID else player.uuid
+
+        if (!isAdmin) {
+            val maxVol = CaeroClaimsConfig.MAX_VOLUME_PER_CLAIM.get()
+            val existing = data.byOwner[player.uuid]?.let { data.claims[it]?.totalBlocks() } ?: 0L
+            if (existing + volume > maxVol) {
+                actionBar(player, "Claim would exceed max size ($maxVol blocks).", red = true)
+                sendPendingClear(player)
+                return ArmResult.VolumeTooLarge
+            }
         }
 
         if (!CaeroClaimsConfig.ALLOW_OVERLAP.get() &&
-            data.anyForeignClaimIntersects(box, player.uuid)
+            data.anyForeignClaimIntersects(box, ownerUuid)
         ) {
-            actionBar(player, "That area overlaps another player's claim.", red = true)
+            actionBar(player, "That area overlaps another claim.", red = true)
             sendPendingClear(player)
             return ArmResult.Overlaps
         }
 
-        val spursPerBlock = CaeroClaimsConfig.SPURS_PER_BLOCK.get().toLong()
-        val costLong = volume * spursPerBlock
-        if (costLong > Int.MAX_VALUE) {
-            actionBar(player, "Claim cost overflows: pick a smaller area.", red = true)
-            sendPendingClear(player)
-            return ArmResult.VolumeTooLarge
-        }
-        val cost = costLong.toInt()
+        val cost: Int
+        val multiplier: Double
+        val drivingForeign: Long
+        if (isAdmin) {
+            cost = 0
+            multiplier = 1.0
+            drivingForeign = 0L
+        } else {
+            val spursPerBlock = CaeroClaimsConfig.SPURS_PER_BLOCK.get()
+            val foreignClaims = data.claims.values.asSequence()
+                .filter { it.owner != player.uuid }
+                .map { ClaimPricing.ForeignClaim(it.volumes.toList(), it.totalBlocks()) }
+                .asIterable()
+            val quote = ClaimPricing.quote(box, volume, spursPerBlock, foreignClaims)
+            val costLong = quote.cost
+            if (costLong > Int.MAX_VALUE) {
+                actionBar(player, "Claim cost overflows: pick a smaller area.", red = true)
+                sendPendingClear(player)
+                return ArmResult.VolumeTooLarge
+            }
+            cost = costLong.toInt()
+            multiplier = quote.effectiveMultiplier
+            drivingForeign = quote.drivingForeignBlocks
 
-        // Balance check is best-effort here — we re-check at confirm time.
-        val balance = Numismatics.BANK.getAccount(player).balance
-        if (balance < cost) {
-            actionBar(
-                player,
-                "Insufficient balance: $cost spurs needed, have $balance. Earn more before confirming.",
-                red = true,
-            )
-            // Still arm — player might top up the bank before confirming.
+            // Balance check is best-effort here — we re-check at confirm time.
+            val balance = Numismatics.BANK.getAccount(player).balance
+            if (balance < cost) {
+                actionBar(
+                    player,
+                    "Insufficient balance: $cost spurs needed, have $balance. Earn more before confirming.",
+                    red = true,
+                )
+                // Still arm — player might top up the bank before confirming.
+            }
         }
 
-        val p = Pending(a, b, level.dimension(), box, volume, cost)
+        val p = Pending(a, b, level.dimension(), box, volume, cost, isAdmin)
         pending[player.uuid] = p
 
-        sendChat(
-            player,
-            "Pending claim: $volume blocks, $cost spurs. Run §6/caero-claim yes§r to confirm or §7/caero-claim cancel§r to abort.",
-        )
+        if (isAdmin) {
+            sendChat(
+                player,
+                "§6Admin pending claim§r: $volume blocks, FREE. " +
+                    "Run §6/caero-claim yes§r to confirm or §7/caero-claim cancel§r to abort.",
+            )
+        } else {
+            val multiplierNote = if (multiplier > 1.0) {
+                val neighbour = if (drivingForeign > volume) ", ${drivingForeign}-block neighbour" else ""
+                " §c(×${"%.2f".format(multiplier)} proximity surcharge$neighbour)§r"
+            } else ""
+            sendChat(
+                player,
+                "Pending claim: $volume blocks, $cost spurs.$multiplierNote " +
+                    "Run §6/caero-claim yes§r to confirm or §7/caero-claim cancel§r to abort.",
+            )
+        }
         return ArmResult.Success(p)
     }
 
@@ -182,40 +231,58 @@ object ServerClaimService {
             actionBar(player, "No pending claim to confirm.", red = true)
             return false
         }
+        if (p.isAdmin && !player.hasPermissions(2)) {
+            // Op was demoted between arm and confirm — refuse.
+            actionBar(player, "Admin claim requires operator permission.", red = true)
+            cancelClaim(player)
+            return false
+        }
         if (p.dimension != player.serverLevel().dimension()) {
             actionBar(player, "Pending claim is in a different dimension. Cancelling.", red = true)
             cancelClaim(player)
             return false
         }
-        val account = Numismatics.BANK.getAccount(player)
-        if (!account.deduct(p.costSpurs)) {
-            actionBar(
-                player,
-                "Insufficient balance: ${p.costSpurs} spurs needed, have ${account.balance}.",
-                red = true,
-            )
-            return false
+
+        val ownerUuid = if (p.isAdmin) ADMIN_OWNER_UUID else player.uuid
+        val balanceAfter: Int
+        if (p.isAdmin) {
+            balanceAfter = -1
+        } else {
+            val account = Numismatics.BANK.getAccount(player)
+            if (!account.deduct(p.costSpurs)) {
+                actionBar(
+                    player,
+                    "Insufficient balance: ${p.costSpurs} spurs needed, have ${account.balance}.",
+                    red = true,
+                )
+                return false
+            }
+            balanceAfter = account.balance
         }
 
         val level = player.serverLevel()
         val data = ClaimDimensionData.get(level)
-        val claim = data.addOrExtend(player.uuid, p.box)
+        val claim = data.addOrExtend(ownerUuid, p.box)
         val server = player.server ?: return false
         broadcastUpdate(server, level, claim, ownerNameFor(server, claim.owner))
-        actionBar(
-            player,
-            "Claimed ${p.volume} blocks · -${p.costSpurs} spurs · balance ${account.balance}",
-            red = false,
-        )
-        if (CaeroClaimsConfig.BROADCAST_NEW_CLAIMS.get()) {
+        if (p.isAdmin) {
+            actionBar(player, "Admin claim: ${p.volume} blocks · FREE", red = false)
+        } else {
+            actionBar(
+                player,
+                "Claimed ${p.volume} blocks · -${p.costSpurs} spurs · balance $balanceAfter",
+                red = false,
+            )
+        }
+        if (CaeroClaimsConfig.BROADCAST_NEW_CLAIMS.get() && !p.isAdmin) {
             server.playerList.broadcastSystemMessage(
                 Component.literal("${player.gameProfile.name} claimed ${p.volume} blocks."),
                 false,
             )
         }
         CaeroClaims.LOG.info(
-            "claim: player={} dim={} box=({},{},{})-({},{},{}) volume={} cost={}",
-            player.gameProfile.name, level.dimension().location(),
+            "claim: player={} admin={} dim={} box=({},{},{})-({},{},{}) volume={} cost={}",
+            player.gameProfile.name, p.isAdmin, level.dimension().location(),
             p.box.minX(), p.box.minY(), p.box.minZ(), p.box.maxX(), p.box.maxY(), p.box.maxZ(),
             p.volume, p.costSpurs,
         )
@@ -276,6 +343,7 @@ object ServerClaimService {
     }
 
     fun ownerNameFor(server: MinecraftServer, uuid: UUID): String {
+        if (uuid == ADMIN_OWNER_UUID) return ADMIN_OWNER_NAME
         server.playerList.getPlayer(uuid)?.let { return it.gameProfile.name }
         val cached = server.profileCache?.get(uuid)
         if (cached != null && cached.isPresent) return cached.get().name

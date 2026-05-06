@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "createstockexchange:block/stock_exchange"
+    }
+  }
+}

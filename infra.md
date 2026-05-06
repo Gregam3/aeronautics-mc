@@ -1,9 +1,18 @@
 # Infrastructure — Create Aeronautics Server
 
-**Last updated:** 2026-04-20
-**Status:** Provider locked — **Hetzner Cloud CX42** (x86, 16 GB / 8 vCPU / 160 GB NVMe,
-~€12.49/mo). Region defaulted to Falkenstein (FSN). Not yet provisioned; glue-mod
-work comes first per Greg's sequencing.
+**Last updated:** 2026-04-26
+**Status:** **Provisioned 2026-04-26.** Hetzner Cloud **cpx42** (x86 AMD shared,
+16 GB / 8 vCPU / 320 GB NVMe, ~€25.49/mo net) in **NBG1** (Nuremberg). Public IP
+**46.225.17.145**. Server is bootstrapped (Debian 12 + Temurin JDK 21 + ufw +
+fail2ban) but **idle** — no Minecraft jar deployed yet, awaiting glue-mod work
+per Greg's sequencing.
+
+> **Lineup change vs. earlier plan:** The original target was cx42 (~€12.49/mo).
+> Hetzner retired that line; closest like-for-like today is `cx43` (Intel shared,
+> same price). We picked `cpx42` (AMD shared, newer gen) instead — better
+> single-thread under Create Aeronautics physics load, plus 2× the disk (320 GB
+> vs 160 GB) for ~€13/mo more. FSN1 was at capacity at provision time, so we
+> took NBG1 (same EU-central network zone, equivalent latency).
 
 > This doc is for hosting + ops. Mod choices live in `mods.md`; gameplay design in
 > `PLAN.md`.
@@ -50,25 +59,28 @@ Dominant resource: **RAM** (JVM heap + DH + loaded chunks), then **single-thread
 
 ## 4. Hosting provider comparison
 
-All prices approximate, **verified 2026-04 against provider public pricing pages**.
-The spec target below is **16 GB RAM / 8 vCPU / ~160 GB SSD**.
+All prices approximate, **verified 2026-04-26 against provider public pricing pages**.
+The spec target below is **16 GB RAM / 8 vCPU / ≥160 GB SSD**. Hetzner reshuffled
+its lineup since 2026-04: the old `cx42` is retired; current EU-central options
+at this tier are below.
 
-| Provider / plan | Monthly | Shell access | Notes |
-|---|---|---|---|
-| **Hetzner Cloud CX42** (x86 AMD) | ~**€12.49 / $14** | Full root | Excellent price/perf. EU (FSN/HEL) + US (ASH/HIL). Hourly billing. |
-| **Hetzner Cloud CAX41** (ARM Ampere) | ~€12.49 / $14 | Full root | ARM — confirm all mods load under aarch64 JVM. Same price as x86. |
-| **Oracle Cloud Free Tier** (ARM A1) | **$0** (always-free) | Full root | 4 OCPU / 24 GB cap. Capacity often unavailable in the free tier; reliability varies. ARM. |
-| **Dedicated MC hosts** (BisectHosting Premium 16GB, Shockbyte, Apex) | ~$30–50 | Limited (admin panel + FTP; sometimes sudo) | Zero ops. One-click mod uploads. Less flexibility. |
-| **OVH VPS Elite** or similar | ~$30–50 | Full root | Midrange option; less cheap than Hetzner, more capable than MC hosts. |
-| **DigitalOcean / Vultr / Linode** (16 GB droplet) | ~$80–96 | Full root | Same tier as AWS but cheaper. Still 6× Hetzner. |
-| **AWS EC2 m7i.xlarge** | ~$145 on-demand | Full root | Ops tooling value doesn't apply to a single MC box. Overpriced. |
-| **Self-host on a spare PC** | $0 hardware | Full | Port-forward + DDNS. Electricity cost depends on rig. |
+| Provider / plan | Monthly (net) | CPU | Disk | Shell access | Notes |
+|---|---|---|---|---|---|
+| **Hetzner cx43** (Intel shared) | ~€11.99 | 8 c | 160 GB | Full root | Direct successor to old cx42. Cheapest option. |
+| **Hetzner cpx42** (AMD shared, Gen 2) — **PICKED** | ~€25.49 | 8 c | **320 GB** | Full root | Newer-gen AMD, better single-thread for Create Aeronautics physics. Doubled disk for DH LODs. |
+| **Hetzner ccx23** (AMD dedicated) | ~€31.49 | 4 c (ded.) | 160 GB | Full root | Upgrade path if cpx42 single-thread isn't enough. Fewer cores but no noisy neighbours. |
+| **Hetzner cax31** (ARM Ampere) | ~€16 (est.) | 8 c | 160 GB | Full root | ARM — confirm all mods load under aarch64 JVM. |
+| **Dedicated MC hosts** (BisectHosting, Shockbyte, Apex) | ~$30–50 | varies | varies | Limited (panel + FTP) | Zero ops. Less flexibility. |
+| **DigitalOcean / Vultr / Linode** (16 GB droplet) | ~$80–96 | 8 c | varies | Full root | ~3× Hetzner. |
+| **AWS EC2 m7i.xlarge** | ~$145 on-demand | 4 c | EBS | Full root | Overpriced for a single MC box. |
+| **Self-host on a spare PC** | $0 hardware | varies | varies | Full | Port-forward + DDNS. Electricity cost depends on rig. |
 
 ### Recommendation
 
-**Default: Hetzner Cloud CX42 (x86), ~$14/mo.** Full shell, reliable DC, hourly
-billing (easy to tear down + re-launch), same resources as the $145 AWS box. If
-players are concentrated in the UK/EU, use FSN or HEL; if mostly US, use ASH.
+**Picked: Hetzner cpx42, NBG1** (locked + provisioned 2026-04-26). The
+single-thread headroom over `cx43` (Intel shared) is the relevant lever for
+Create Aeronautics physics; `ccx23` (dedicated) is one `hcloud server change-type`
+away if cpx42 isn't enough.
 
 **"Zero ops" alternative:** BisectHosting Premium 16 GB, ~$40/mo. Worth the 3×
 premium if Greg doesn't want to do OS-level admin. Supports custom NeoForge jars.
@@ -78,15 +90,22 @@ only.
 
 ---
 
-## 5. Storage layout (Hetzner CX42 assumed)
+## 5. Storage layout (cpx42, 320 GB NVMe)
 
-- **Root volume:** 160 GB NVMe that comes with the instance. Split:
-  - `/` (root + OS): ~10 GB
-  - `/srv/minecraft` (server + mods + config): ~20 GB
-  - `/srv/minecraft/world` (world data + DH LODs): ~100 GB runway, expect 10–30 GB actual use
-  - `/srv/minecraft/backups` (hot backups before S3 / offsite): ~20 GB
-- **Backups:** weekly tarball pushed to Hetzner Storage Box (cheap) or S3 Glacier IR.
-  Retention ~14 days.
+Single root partition, no separate volume. Directory tree under `/srv/minecraft`,
+all owned by the `minecraft` system user with mode 0750:
+
+- `/` (root + OS): ~3 GB used after bootstrap
+- `/srv/minecraft/server` — server jar, mods, config
+- `/srv/minecraft/world` — world data + DH LODs (expect 10–30 GB actual use)
+- `/srv/minecraft/backups` — local hot backups before push to offsite
+
+The doubled disk (vs the old 160 GB target) means DH LODs + world + 14 days of
+local backups all comfortably fit on root; no need for a separate Hetzner Volume
+unless we later want detachable persistence.
+
+- **Backups:** weekly tarball pushed to Hetzner Storage Box (cheap, same network)
+  or S3 Glacier IR. Retention ~14 days. **Not yet configured.**
 
 ---
 
@@ -97,7 +116,9 @@ only.
 - **Simple Voice Chat:** 24454 UDP, open to internet.
 - **SSH:** 22 TCP, restricted to Greg's IP or a small allowlist. No root login;
   key-based auth only.
-- **No inbound web traffic** unless we later want a status dashboard.
+- **HTTP wiki:** 80 TCP, open to internet. Caddy serves a static MkDocs site
+  (`wiki/`) at `http://46.225.17.145/`. HTTP-only — no domain, no TLS. See
+  `runbook.md §12`.
 
 ---
 
@@ -129,19 +150,38 @@ only.
 
 ## 9. Open questions for Greg
 
-1. ~~**Provider pick**~~ — **Locked 2026-04-20: Hetzner CX42.**
-2. **Region** — FSN default. Where are Beth and Corey physically? If mostly US,
-   switch to ASH (Ashburn, VA). If mostly UK/EU, FSN or HEL (Helsinki) are fine.
-3. **Access model** — open with in-game whitelist (easier), or SSH/MC restricted
-   to a CIDR allowlist (more paranoid)?
+1. ~~**Provider pick**~~ — **Locked 2026-04-20, provisioned 2026-04-26: Hetzner cpx42, NBG1.**
+2. ~~**Region**~~ — **NBG1 (Nuremberg).** FSN1 was at capacity at provision time;
+   NBG1 is the same EU-central network zone. Revisit if Beth/Corey play from US.
+3. ~~**Access model**~~ — **Decided 2026-04-26: SSH key-only auth, port 22 open
+   to internet; root login disabled, password auth disabled.** MC port (25565)
+   open to internet; relying on the in-game whitelist for access control.
 4. **Backup tooling** — Hetzner Storage Box (cheap, same-network), or S3 Glacier?
+   Not yet configured.
 5. **Domain name** — any preferred hostname for the server's DNS A record?
+   Currently reachable only via IP `46.225.17.145`.
 
 ---
 
-## 10. What this doc doesn't cover yet
+## 10. Provisioning
 
-- Terraform / provisioning scripts (will add once provider is locked).
+- **Tool:** `hcloud` CLI (1.63+), installed at `~/.local/bin/hcloud`. Token in
+  `~/.config/hcloud/cli.toml` (mode 0600, **never committed**).
+- **Cloud-init:** `infra/cloud-init.yaml` — first-boot bootstrap (users, JDK 21,
+  ufw, fail2ban, /srv/minecraft layout, SSH hardening). Tracked in repo.
+- **Recreate command:**
+  ```
+  hcloud server create --name aeronautics-mc --type cpx42 --image debian-12 \
+    --location nbg1 --ssh-key greg-omen \
+    --user-data-from-file infra/cloud-init.yaml
+  ```
+- **SSH:** `ssh greg@46.225.17.145`.
+
+## 11. What this doc doesn't cover yet
+
+- Terraform conversion (cloud-init covers the box; Terraform only useful if we
+  manage multiple resources).
 - Mod-update workflow (`rsync` + restart script).
 - Monitoring (`node_exporter` + a small Grafana somewhere).
 - DNS (A record at whatever registrar → server IP).
+- Backup automation (decision pending — Storage Box vs S3 Glacier).

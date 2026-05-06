@@ -4,8 +4,29 @@
     "layer0": "minecraft:item/raw_gold"
   },
   "overrides": [
-    { "predicate": { "caero_specialization:quality": 0.3 }, "model": "caero_specialization:item/raw_gold_low" },
-    { "predicate": { "caero_specialization:quality": 0.6 }, "model": "caero_specialization:item/raw_gold_medium" },
-    { "predicate": { "caero_specialization:quality": 0.9 }, "model": "caero_specialization:item/raw_gold_high" }
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.0
+      },
+      "model": "caero_specialization:item/raw_gold_unrefined"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.3
+      },
+      "model": "caero_specialization:item/raw_gold_low"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.6
+      },
+      "model": "caero_specialization:item/raw_gold_medium"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.9
+      },
+      "model": "caero_specialization:item/raw_gold_high"
+    }
   ]
 }

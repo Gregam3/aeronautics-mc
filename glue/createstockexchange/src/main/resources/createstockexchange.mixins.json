@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "com.example.createstockexchange.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "createstockexchange.refmap.json",
+  "mixins": [
+    "MixinVendorBlockEntity",
+    "MixinVendorContainerSynchronizer"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

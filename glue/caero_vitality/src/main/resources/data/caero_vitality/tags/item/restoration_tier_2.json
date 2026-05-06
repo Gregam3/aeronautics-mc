@@ -1,0 +1,26 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:pumpkin_pie",
+    "minecraft:mushroom_stew",
+    "minecraft:beetroot_soup",
+    "minecraft:rabbit_stew",
+    "minecraft:honey_bottle",
+
+    { "id": "farmersdelight:bone_broth",        "required": false },
+    { "id": "farmersdelight:vegetable_soup",    "required": false },
+    { "id": "farmersdelight:mushroom_stew",     "required": false },
+    { "id": "farmersdelight:beetroot_soup",     "required": false },
+    { "id": "farmersdelight:glow_berry_custard","required": false },
+    { "id": "farmersdelight:fruit_salad",       "required": false },
+    { "id": "farmersdelight:mixed_salad",       "required": false },
+    { "id": "farmersdelight:nether_salad",      "required": false },
+    { "id": "farmersdelight:cooked_rice",       "required": false },
+    { "id": "farmersdelight:fried_rice",        "required": false },
+    { "id": "farmersdelight:mushroom_rice",     "required": false },
+    { "id": "farmersdelight:apple_pie",         "required": false },
+    { "id": "farmersdelight:chocolate_pie",     "required": false },
+    { "id": "farmersdelight:sweet_berry_cheesecake","required": false },
+    { "id": "farmersdelight:roasted_mutton_chops","required": false }
+  ]
+}

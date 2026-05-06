@@ -8,6 +8,13 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox
 import java.util.UUID
 
 /**
+ * Sentinel owner UUID used by admin-wand claims. Co-located here so both the
+ * data layer (for admin-bypass checks in [ClaimDimensionData.isProtected])
+ * and the service layer can reference it without a circular dependency.
+ */
+val ADMIN_OWNER_UUID: UUID = UUID.fromString("ca6e0adc-0000-0000-0000-000000000001")
+
+/**
  * A single player's claim in one dimension. Composed of one or more axis-aligned
  * inclusive [BoundingBox] volumes. New volumes append to the same [Claim] for the
  * owner; v1 has one [Claim] per player per dimension.
@@ -20,6 +27,7 @@ data class Claim(
     val owner: UUID,
     val volumes: MutableList<BoundingBox>,
 ) {
+    val isAdmin: Boolean get() = owner == ADMIN_OWNER_UUID
     /** Total block count across all volumes (no overlap deduplication — claims
      *  do not overlap with each other but a player can technically self-overlap
      *  if the AABB they confirm is contained in an existing volume; see

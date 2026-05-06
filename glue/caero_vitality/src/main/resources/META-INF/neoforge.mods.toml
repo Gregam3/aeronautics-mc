@@ -1,0 +1,45 @@
+modLoader="kotlinforforge"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Graduated max-heart penalty on player death + tag-based restoration foods.
+
+Each death drops the player's max-health attribute on a softening curve:
+death 1 = -1.0 heart, deaths 2-5 = -0.5 each (down to 7 hearts), then
+-0.25 each down to a hard floor of 5 hearts. Eating items in the
+caero_vitality:restoration_tier_N tags restores lost hearts; tier-4
+banquet dishes also grant temporary bonus hearts above 10.
+
+Designed to make the husbandry / cook role economically essential and
+to give death real friction without making early-game punishing.
+
+Configurable: per-death loss amounts, restoration tier values, first-life
+grace period.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5,)"
+    ordering="NONE"
+    side="BOTH"

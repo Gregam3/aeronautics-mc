@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "ISI",
+    "PPP"
+  ],
+  "key": {
+    "C": { "item": "minecraft:chest" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "item": "minecraft:sign" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": {
+    "id": "createstockexchange:trade_post",
+    "count": 1
+  }
+}

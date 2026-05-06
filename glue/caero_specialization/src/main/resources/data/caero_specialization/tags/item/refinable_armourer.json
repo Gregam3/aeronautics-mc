@@ -3,6 +3,7 @@
   "values": [
     "minecraft:wooden_sword",
     "minecraft:stone_sword",
+    "minecraft:copper_sword",
     "minecraft:iron_sword",
     "minecraft:golden_sword",
     "minecraft:diamond_sword",
@@ -10,6 +11,7 @@
 
     "minecraft:wooden_pickaxe",
     "minecraft:stone_pickaxe",
+    "minecraft:copper_pickaxe",
     "minecraft:iron_pickaxe",
     "minecraft:golden_pickaxe",
     "minecraft:diamond_pickaxe",
@@ -17,6 +19,7 @@
 
     "minecraft:wooden_axe",
     "minecraft:stone_axe",
+    "minecraft:copper_axe",
     "minecraft:iron_axe",
     "minecraft:golden_axe",
     "minecraft:diamond_axe",
@@ -24,6 +27,7 @@
 
     "minecraft:wooden_shovel",
     "minecraft:stone_shovel",
+    "minecraft:copper_shovel",
     "minecraft:iron_shovel",
     "minecraft:golden_shovel",
     "minecraft:diamond_shovel",
@@ -31,6 +35,7 @@
 
     "minecraft:wooden_hoe",
     "minecraft:stone_hoe",
+    "minecraft:copper_hoe",
     "minecraft:iron_hoe",
     "minecraft:golden_hoe",
     "minecraft:diamond_hoe",
@@ -45,6 +50,11 @@
     "minecraft:chainmail_chestplate",
     "minecraft:chainmail_leggings",
     "minecraft:chainmail_boots",
+
+    "minecraft:copper_helmet",
+    "minecraft:copper_chestplate",
+    "minecraft:copper_leggings",
+    "minecraft:copper_boots",
 
     "minecraft:iron_helmet",
     "minecraft:iron_chestplate",
@@ -66,6 +76,8 @@
     "minecraft:netherite_leggings",
     "minecraft:netherite_boots",
 
-    "minecraft:turtle_helmet"
+    "minecraft:turtle_helmet",
+
+    "minecraft:shield"
   ]
 }

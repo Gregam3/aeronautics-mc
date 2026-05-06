@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    "IGI",
+    "PPP"
+  ],
+  "key": {
+    "S": { "item": "minecraft:oak_slab" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": {
+    "id": "createstockexchange:business_vendor",
+    "count": 1
+  }
+}

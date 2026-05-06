@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    "PGP",
+    "PPP"
+  ],
+  "key": {
+    "B": { "item": "minecraft:book" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": {
+    "id": "createstockexchange:ipo_desk",
+    "count": 1
+  }
+}

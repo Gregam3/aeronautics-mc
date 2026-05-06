@@ -15,8 +15,11 @@ import net.neoforged.neoforge.event.furnace.FurnaceFuelBurnTimeEvent
  *     reads as [Quality.UNREFINED] which equals the post-nerf vanilla baseline
  *     (2 items per piece).
  *
- *  2. **Every other vanilla-burnable** (logs, planks, slabs, stairs, doors,
- *     sticks, bamboo, wooden tools, lava buckets, blaze rods, …) is divided by
+ *  2. **Lava buckets** → disabled outright (burn time forced to 0). 100 free
+ *     smelts per bucket trivialises the fuel economy; no divisor makes that OK.
+ *
+ *  3. **Every other vanilla-burnable** (logs, planks, slabs, stairs, doors,
+ *     sticks, bamboo, wooden tools, blaze rods, …) is divided by
  *     [CaeroSpecializationConfig.NON_FUEL_BURN_DIVISOR] (default 4×). This makes
  *     refined coal/charcoal the obviously-correct fuel to actually run on, and
  *     keeps the player economy pointed at refiners.
@@ -27,6 +30,11 @@ object FuelBurnTime {
     fun onFuelBurnTime(event: FurnaceFuelBurnTimeEvent) {
         val stack = event.itemStack
         val item = stack.item
+
+        if (item == Items.LAVA_BUCKET) {
+            event.burnTime = 0
+            return
+        }
 
         if (item == Items.COAL || item == Items.CHARCOAL) {
             val quality = stack.get(QualityComponent.QUALITY.get()) ?: Quality.UNREFINED

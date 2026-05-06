@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "minecraft:block/cobblestone",
+    "particle": "caero_specialization:block/armourer_refiner_side",
     "down":     "minecraft:block/cobblestone",
-    "up":       "minecraft:block/cobblestone",
-    "north":    "minecraft:block/anvil",
-    "south":    "minecraft:block/cobblestone",
-    "east":     "minecraft:block/cobblestone",
-    "west":     "minecraft:block/cobblestone"
+    "up":       "minecraft:block/anvil",
+    "north":    "caero_specialization:block/armourer_refiner_side",
+    "south":    "caero_specialization:block/armourer_refiner_side",
+    "east":     "caero_specialization:block/armourer_refiner_side",
+    "west":     "caero_specialization:block/armourer_refiner_side"
   }
 }

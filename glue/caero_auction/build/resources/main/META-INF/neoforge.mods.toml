@@ -1,0 +1,43 @@
+modLoader="kotlinforforge"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="caero_auction"
+version="0.1.0"
+displayName="Caero: Auction House"
+authors="Greg"
+description='''
+Player-to-player auction house. Place an Auction House block and right-click
+to open the GUI. List item stacks at a fixed spur price. Other players can
+browse and buy — payment routes directly to the seller's Numismatics bank
+account. Sellers can cancel their own listings to retrieve the items.
+'''
+
+[[dependencies.caero_auction]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.caero_auction]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1]"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.caero_auction]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5.9.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.caero_auction]]
+    modId="numismatics"
+    type="required"
+    versionRange="[1.0.20,)"
+    ordering="AFTER"
+    side="BOTH"

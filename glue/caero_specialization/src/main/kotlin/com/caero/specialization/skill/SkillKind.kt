@@ -9,9 +9,18 @@ enum class SkillKind(
     val id: String,
     val displayName: String,
 ) {
-    FORESTRY("forestry", "Forestry"),
+    // Display rename 2026-05-03: FORESTRY → "Fueler" (covers all fuels —
+    // wood, charcoal, coal, future blaze fuel). Skill id stays "forestry"
+    // for save/config back-compat.
+    FORESTRY("forestry", "Fueler"),
     MINING("mining", "Mining"),
-    ARMOURER("armourer", "Armourer");
+    ARMOURER("armourer", "Armourer"),
+    HUSBANDRY("husbandry", "Husbandry"),
+    ALCHEMIST("alchemist", "Alchemist"),
+    JEWELERY("jewelery", "Jewelery"),
+    // Display rename 2026-05-03: FISHING → "Hunter" (handles fish refining
+    // + mob-drop catalyst flows). Skill id stays "fishing" for back-compat.
+    FISHING("fishing", "Hunter");
 
     companion object {
         fun fromId(id: String): SkillKind? = values().firstOrNull { it.id == id }

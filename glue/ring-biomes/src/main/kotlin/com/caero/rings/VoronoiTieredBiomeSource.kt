@@ -80,7 +80,8 @@ class VoronoiTieredBiomeSource(
         val worldZ = QuartPos.toBlock(z)
         val wanted = resolveTier(worldX, worldZ)
 
-        return if (naturalTier == wanted) natural else pickSubstitute(wanted, natural, worldX, worldZ)
+        return if (naturalTier == wanted) natural
+        else pickSubstitute(wanted, natural, worldX, worldZ, y, sampler)
     }
 
     /**
@@ -156,29 +157,44 @@ class VoronoiTieredBiomeSource(
     }
 
     /**
-     * Swap with a biome from the target tier whose base temperature is close to
-     * the natural biome's. Three rules:
+     * Swap with a biome from the target tier whose base temperature is close
+     * to the natural biome's. Four rules, in order:
      *
-     *  1. **Climate band** — only candidates within [TEMP_BAND] of the natural's
-     *     baseTemperature are eligible, so we don't drop a glacier next to a
-     *     desert because the tier wanted a downgrade.
-     *  2. **Climate cap** — if the band yields no candidate AND even the
+     *  1. **Worley-cellular cell selection** — quantize (worldX, worldZ) into
+     *     a jittered grid at [BIOME_PATCH_SCALE]. The position's "cell" is
+     *     the nearest jittered center in a 3×3 neighborhood. Inside a cell
+     *     we always pick the same biome → blob-shaped patches with wavy
+     *     Voronoi-bisector boundaries between cells. Replaces the previous
+     *     scalar-noise sweep, which produced isolines (long thin bands) along
+     *     local noise gradients.
+     *  2. **Climate stability across the cell** — pool composition is computed
+     *     from the delegate biome's temperature *at the cell's center*, not at
+     *     the current position. Without this, a temperature gradient inside a
+     *     single cell would swap pool members under the same hash index and
+     *     reintroduce banding. The cost is one extra delegate.getNoiseBiome
+     *     call per substituted quart (delegate is vanilla multi_noise — cheap,
+     *     no recursion into us).
+     *  3. **Climate band** — only candidates within [TEMP_BAND] of the cell-
+     *     center's baseTemperature are eligible. Stops a glacier dropping next
+     *     to a desert when tiers want a downgrade.
+     *  4. **Climate cap** — if the band yields no candidate AND even the
      *     closest is more than [MAX_TEMP_DRIFT] away, give up on substituting
      *     and let the natural biome through. Better a tier-mismatched cell
-     *     than a thermal cliff. (Hard cells with cool-temperate naturals will
-     *     leak through; that's the trade-off the tier system accepts.)
-     *  3. **Cohesive patches** — pool selection uses a smooth value-noise
-     *     field at [BIOME_PATCH_SCALE] so adjacent quarts land on the same
-     *     biome for ~hundreds of blocks at a time, instead of a 4-block-wide
-     *     checkerboard from per-quart hashing. Diversity comes from the noise
-     *     sweeping across the whole pool over distance.
+     *     than a thermal cliff.
      *
      * If the target tier's HolderSet is empty at runtime (tag failed to bind,
      * or codec wired the wrong tag), we log loudly instead of silently passing
      * through. That's the failure mode that made hard biomes appear inside the
      * easy floor during testing.
      */
-    private fun pickSubstitute(wanted: Tier, natural: Holder<Biome>, worldX: Int, worldZ: Int): Holder<Biome> {
+    private fun pickSubstitute(
+        wanted: Tier,
+        natural: Holder<Biome>,
+        worldX: Int,
+        worldZ: Int,
+        yQuart: Int,
+        sampler: Climate.Sampler,
+    ): Holder<Biome> {
         val candidates = when (wanted) {
             Tier.EASY -> easy
             Tier.MEDIUM -> medium
@@ -192,7 +208,44 @@ class VoronoiTieredBiomeSource(
             )
             return natural
         }
-        val target = natural.value().baseTemperature
+
+        // ── Worley cell membership ───────────────────────────────────────────
+        val cell = BIOME_PATCH_SCALE
+        val gx = Math.floorDiv(worldX, cell)
+        val gz = Math.floorDiv(worldZ, cell)
+        var bestDistSq = Long.MAX_VALUE
+        var bestCx = gx
+        var bestCz = gz
+        var bestPx = 0
+        var bestPz = 0
+        for (dx in -1..1) {
+            for (dz in -1..1) {
+                val cx = gx + dx
+                val cz = gz + dz
+                val h = patchHash(cx, cz)
+                // Two 16-bit slices of the hash give jx, jz in [0, cell).
+                val jx = ((h and 0xFFFF) * cell) ushr 16
+                val jz = (((h ushr 16) and 0xFFFF) * cell) ushr 16
+                val px = cx * cell + jx
+                val pz = cz * cell + jz
+                val ddx = (worldX - px).toLong()
+                val ddz = (worldZ - pz).toLong()
+                val d = ddx * ddx + ddz * ddz
+                if (d < bestDistSq) {
+                    bestDistSq = d
+                    bestCx = cx
+                    bestCz = cz
+                    bestPx = px
+                    bestPz = pz
+                }
+            }
+        }
+
+        // ── Stable pool sampled at the cell's chosen center ─────────────────
+        val cellNatural = delegate.getNoiseBiome(
+            QuartPos.fromBlock(bestPx), yQuart, QuartPos.fromBlock(bestPz), sampler,
+        )
+        val target = cellNatural.value().baseTemperature
 
         val pool = ArrayList<Holder<Biome>>()
         var closest: Holder<Biome>? = null
@@ -206,14 +259,26 @@ class VoronoiTieredBiomeSource(
             }
         }
         if (pool.isNotEmpty()) {
-            val n = valueNoise2D(worldX, worldZ, BIOME_PATCH_SCALE)  // [-1, +1]
-            val u = (n + 1f) * 0.5f                                  // [0, 1]
-            val idx = (u * pool.size).toInt().coerceIn(0, pool.size - 1)
+            val h = patchHash(bestCx, bestCz)
+            val idx = (h and Int.MAX_VALUE) % pool.size
             return pool[idx]
         }
-        // No climate match. Cap the fallback so we never place a thermal cliff.
         if (closestDiff > MAX_TEMP_DRIFT) return natural
         return closest ?: natural
+    }
+
+    /**
+     * Cheap integer hash of a (cx, cz) cell coord. Used both to jitter the
+     * Worley center inside the cell and to pick a stable pool index for the
+     * cell. Same constants as the Murmur-style mix used elsewhere in the mod.
+     */
+    private fun patchHash(cx: Int, cz: Int): Int {
+        var h = cx * 0x85EBCA77.toInt()
+        h = h xor (cz * 0xC2B2AE3D.toInt())
+        h = h xor (h ushr 16)
+        h *= 0x85EBCA6B.toInt()
+        h = h xor (h ushr 13)
+        return h
     }
 
     companion object {
@@ -270,15 +335,15 @@ class VoronoiTieredBiomeSource(
         private const val MAX_TEMP_DRIFT = 0.7f
 
         /**
-         * Value-noise grid size used by [pickSubstitute] to select within the
-         * climate-matched pool. The noise sweeps from -1..+1 across one cell
-         * of this size, so with pool size N each pool entry occupies roughly
-         * `BIOME_PATCH_SCALE / N` blocks of footprint. At 1024 blocks and a
-         * typical pool of 4 climate-matched candidates, individual biome
-         * patches are ~256 blocks across — large enough to read as a real
-         * region, small enough that a single tier ring still shows variety.
+         * Worley-cell grid size for substitution. Each cell holds one jittered
+         * center; positions belong to the cell of the nearest center. Inside a
+         * cell, every quart resolves to the same biome → blob-shaped patches
+         * roughly this size across, with wavy Voronoi-bisector boundaries
+         * between adjacent cells. Larger value = bigger biomes; too small
+         * means the pool index churns over short distances and reintroduces
+         * fragmentation.
          */
-        private const val BIOME_PATCH_SCALE = 1024
+        private const val BIOME_PATCH_SCALE = 2048
 
         val CODEC: MapCodec<VoronoiTieredBiomeSource> = RecordCodecBuilder.mapCodec { instance ->
             instance.group(

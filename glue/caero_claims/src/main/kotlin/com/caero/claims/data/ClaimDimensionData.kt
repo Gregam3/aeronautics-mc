@@ -44,10 +44,19 @@ class ClaimDimensionData(
         return null
     }
 
-    /** True iff [pos] lies inside any claim that is not [actor]'s. */
-    fun isProtected(pos: BlockPos, actor: UUID?): Boolean {
+    /**
+     * True iff [pos] lies inside any claim that is not [actor]'s.
+     *
+     * When [hasAdminBypass] is true (op-level players, see [V1ProtectionHandlers]),
+     * admin-owned claims are treated as transparent so ops can build inside them.
+     * Player claims still block ops — admin powers are scoped to the admin zone,
+     * not a global override.
+     */
+    fun isProtected(pos: BlockPos, actor: UUID?, hasAdminBypass: Boolean = false): Boolean {
         val c = claimAt(pos) ?: return false
-        return c.owner != actor
+        if (c.owner == actor) return false
+        if (hasAdminBypass && c.isAdmin) return false
+        return true
     }
 
     /** True iff any block of [box] lies inside a claim not owned by [actor]. */

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "I I",
+    "   "
+  ],
+  "key": {
+    "L": {
+      "type": "neoforge:components",
+      "items": "minecraft:leather",
+      "components": {
+        "caero_specialization:quality": "high"
+      }
+    },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "id": "minecraft:saddle",
+    "count": 1
+  }
+}

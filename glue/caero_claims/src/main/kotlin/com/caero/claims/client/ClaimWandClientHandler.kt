@@ -1,11 +1,12 @@
 package com.caero.claims.client
 
-import com.caero.claims.CaeroClaims
+import com.caero.claims.ClaimWandItem
 import com.caero.claims.config.CaeroClaimsConfig
 import com.caero.claims.data.boundingBoxFromCorners
 import com.caero.claims.data.volumeBlocks
 import com.caero.claims.net.ClaimArmPacket
 import com.caero.claims.net.ClaimCancelPacket
+import com.caero.claims.pricing.ClaimPricing
 import dev.ithundxr.createnumismatics.Numismatics
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
@@ -48,7 +49,8 @@ object ClaimWandClientHandler {
     fun onClientTick(event: ClientTickEvent.Post) {
         val mc = Minecraft.getInstance()
         val player = mc.player ?: return reset()
-        if (!isHoldingWand(player)) {
+        val wand = heldWand(player)
+        if (wand == null) {
             reset()
             return
         }
@@ -59,7 +61,7 @@ object ClaimWandClientHandler {
                 if (hit is BlockHitResult && hit.type == HitResult.Type.BLOCK) hit.blockPos else null
         }
 
-        updateActionBar(player)
+        updateActionBar(player, wand.isAdmin)
     }
 
     @SubscribeEvent
@@ -67,7 +69,7 @@ object ClaimWandClientHandler {
         val player = event.entity
         if (!player.level().isClientSide) return
         if (event.hand != InteractionHand.MAIN_HAND) return
-        if (!isHoldingWand(player)) return
+        val wand = heldWand(player) ?: return
 
         if (secondPos != null) {
             // Armed — right-click cancels. Tell server to drop pending too.
@@ -86,7 +88,7 @@ object ClaimWandClientHandler {
         } else {
             // Lock the second corner locally and ask the server to stage it.
             secondPos = pos
-            PacketDistributor.sendToServer(ClaimArmPacket(first, pos))
+            PacketDistributor.sendToServer(ClaimArmPacket(first, pos, wand.isAdmin))
         }
     }
 
@@ -98,45 +100,89 @@ object ClaimWandClientHandler {
         hoveredPos = null
     }
 
-    private fun updateActionBar(player: LocalPlayer) {
+    private fun updateActionBar(player: LocalPlayer, isAdmin: Boolean) {
         val first = firstPos
         val second = secondPos
         val hover = hoveredPos
         when {
-            first == null -> announce("Right-click corner A. Right-click corner B to arm.")
-            second != null -> announceArmed(player, first, second)
+            first == null -> announce(
+                if (isAdmin) "[ADMIN] Right-click corner A. Right-click corner B to arm. (FREE)"
+                else "Right-click corner A. Right-click corner B to arm."
+            )
+            second != null -> announceArmed(player, first, second, isAdmin)
             hover == null -> announce("Looking for corner B…")
-            else -> announceLivePreview(player, first, hover)
+            else -> announceLivePreview(player, first, hover, isAdmin)
         }
     }
 
-    private fun announceLivePreview(player: LocalPlayer, a: BlockPos, b: BlockPos) {
+    private fun announceLivePreview(player: LocalPlayer, a: BlockPos, b: BlockPos, isAdmin: Boolean) {
         val box = boundingBoxFromCorners(a, b)
         val volume = box.volumeBlocks()
-        val cost = volume * CaeroClaimsConfig.SPURS_PER_BLOCK.get().toLong()
+        if (isAdmin) {
+            announce("[ADMIN] Volume: $volume blocks · Cost: FREE", color = ChatFormatting.GOLD)
+            return
+        }
+        val quote = priceQuote(player, box, volume)
         val balance = currentBalance(player)
-        val canAfford = balance == null || balance >= cost
+        val canAfford = balance == null || balance >= quote.cost
         val msg = buildString {
-            append("Volume: $volume blocks · Cost: $cost spurs")
+            append("Volume: $volume blocks · Cost: ${quote.cost} spurs")
+            if (quote.effectiveMultiplier > 1.0) {
+                append(" (×${"%.2f".format(quote.effectiveMultiplier)} proximity")
+                if (quote.drivingForeignBlocks > volume) append(", ${quote.drivingForeignBlocks}-block neighbour")
+                append(")")
+            }
             if (balance != null) append(" · Balance: $balance")
             if (!canAfford) append(" · INSUFFICIENT")
         }
         announce(msg, color = if (canAfford) ChatFormatting.YELLOW else ChatFormatting.RED)
     }
 
-    private fun announceArmed(player: LocalPlayer, a: BlockPos, b: BlockPos) {
+    private fun announceArmed(player: LocalPlayer, a: BlockPos, b: BlockPos, isAdmin: Boolean) {
         val box = boundingBoxFromCorners(a, b)
         val volume = box.volumeBlocks()
-        val cost = volume * CaeroClaimsConfig.SPURS_PER_BLOCK.get().toLong()
+        if (isAdmin) {
+            announce(
+                "[ADMIN] ARMED · $volume blocks · FREE · Run /caero-claim yes or /caero-claim cancel",
+                color = ChatFormatting.GOLD,
+            )
+            return
+        }
+        val quote = priceQuote(player, box, volume)
         val balance = currentBalance(player)
-        val canAfford = balance == null || balance >= cost
+        val canAfford = balance == null || balance >= quote.cost
+        val proximityNote = if (quote.effectiveMultiplier > 1.0) {
+            val neighbour = if (quote.drivingForeignBlocks > volume) ", ${quote.drivingForeignBlocks}-block neighbour" else ""
+            " (×${"%.2f".format(quote.effectiveMultiplier)} proximity$neighbour)"
+        } else ""
 
         val prompt = if (canAfford) {
-            "ARMED · $volume blocks · $cost spurs · Run /caero-claim yes (NOT REFUNDABLE) or /caero-claim cancel"
+            "ARMED · $volume blocks · ${quote.cost} spurs$proximityNote · Run /caero-claim yes (NOT REFUNDABLE) or /caero-claim cancel"
         } else {
-            "ARMED · INSUFFICIENT — need $cost spurs, have ${balance ?: '?'}. Top up bank or /caero-claim cancel"
+            "ARMED · INSUFFICIENT — need ${quote.cost} spurs$proximityNote, have ${balance ?: '?'}. Top up bank or /caero-claim cancel"
         }
         announce(prompt, color = if (canAfford) ChatFormatting.GOLD else ChatFormatting.RED)
+    }
+
+    private fun priceQuote(
+        player: LocalPlayer,
+        box: net.minecraft.world.level.levelgen.structure.BoundingBox,
+        volume: Long,
+    ): ClaimPricing.PriceQuote {
+        val foreignClaims = ClientClaimStore.getForCurrentDimension().asSequence()
+            .filter { it.owner != player.uuid }
+            .map { summary ->
+                ClaimPricing.ForeignClaim(
+                    summary.volumes,
+                    summary.volumes.sumOf { v ->
+                        ((v.maxX() - v.minX() + 1).toLong()
+                            * (v.maxY() - v.minY() + 1).toLong()
+                            * (v.maxZ() - v.minZ() + 1).toLong())
+                    },
+                )
+            }
+            .asIterable()
+        return ClaimPricing.quote(box, volume, CaeroClaimsConfig.SPURS_PER_BLOCK.get(), foreignClaims)
     }
 
     private fun currentBalance(player: LocalPlayer): Int? =
@@ -148,10 +194,10 @@ object ClaimWandClientHandler {
         hoveredPos = null
     }
 
-    private fun isHoldingWand(player: Player): Boolean {
-        val wand = CaeroClaims.CLAIM_WAND.get()
-        return player.mainHandItem.item === wand || player.offhandItem.item === wand
-    }
+    /** Returns the [ClaimWandItem] in either hand, or null if none. Main hand wins. */
+    private fun heldWand(player: Player): ClaimWandItem? =
+        (player.mainHandItem.item as? ClaimWandItem)
+            ?: (player.offhandItem.item as? ClaimWandItem)
 
     private fun announce(text: String, color: ChatFormatting = ChatFormatting.YELLOW) {
         val mc = Minecraft.getInstance()

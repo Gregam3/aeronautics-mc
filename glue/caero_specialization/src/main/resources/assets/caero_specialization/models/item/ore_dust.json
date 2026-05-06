@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "caero_specialization:item/byproducts/ore_dust"
+  }
+}

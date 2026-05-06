@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/splash_potion_overlay",
+    "layer2": "caero_specialization:item/quality_border_high"
+  }
+}

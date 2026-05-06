@@ -1,0 +1,62 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:wheat",
+    "minecraft:carrot",
+    "minecraft:potato",
+    "minecraft:beetroot",
+    "minecraft:melon_slice",
+    "minecraft:apple",
+    "minecraft:sweet_berries",
+    "minecraft:glow_berries",
+    "minecraft:pumpkin",
+
+    "minecraft:beef",
+    "minecraft:porkchop",
+    "minecraft:chicken",
+    "minecraft:mutton",
+    "minecraft:rabbit",
+    "minecraft:cod",
+    "minecraft:salmon",
+    "minecraft:tropical_fish",
+
+    "minecraft:bread",
+    "minecraft:cookie",
+    "minecraft:pumpkin_pie",
+
+    "minecraft:leather",
+    "minecraft:rabbit_hide",
+    "minecraft:feather",
+    "minecraft:egg",
+    "minecraft:milk_bucket",
+    "minecraft:honeycomb",
+    "minecraft:honey_bottle",
+
+    "#minecraft:wool",
+
+    {
+      "id": "farmersdelight:tomato",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:onion",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:cabbage",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:rice",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:rice_panicle",
+      "required": false
+    },
+    {
+      "id": "farmersdelight:cabbage_leaf",
+      "required": false
+    }
+  ]
+}

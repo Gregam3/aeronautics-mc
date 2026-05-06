@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "pack_format": 48,
+    "description": "Caero — disable infinite-resource loops, mending sources, and BIC craftables (mob drops kept). Loaded via Paxi global datapack."
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "createstockexchange:block/company_desk" }
+  }
+}

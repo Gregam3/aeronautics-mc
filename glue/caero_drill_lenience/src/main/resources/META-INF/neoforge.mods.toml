@@ -1,0 +1,46 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Inflates the Mechanical Drill / Saw block-search box on sable SubLevel
+contraptions. With the default 1/4-block tolerance, a hull overhang of up to
+1/4 block past the drill bit will be cleared instead of pinning the contraption
+against the world ceiling.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="sable"
+    type="required"
+    versionRange="[1.1.3,)"
+    ordering="BEFORE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="create"
+    type="required"
+    versionRange="[6.0.0,)"
+    ordering="BEFORE"
+    side="BOTH"
+
+[[mixins]]
+    config="caero_drill_lenience.mixins.json"

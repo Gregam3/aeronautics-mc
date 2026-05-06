@@ -55,25 +55,80 @@ def load_seeds() -> list[dict]:
     return data["generator"]["biome_source"]["seeds"]
 
 
-def load_min_radii() -> tuple[int, int]:
-    """Read medium_min_radius and hard_min_radius from the dimension preset.
-
-    Mirrors the fallbacks in VoronoiTieredBiomeSource.floor() — defaults to
-    1500/1500 if the fields aren't set."""
+def load_floor_params() -> tuple[int, int, int]:
+    """Read medium_min_radius, hard_min_radius, and floor_jitter from the
+    dimension preset. Mirrors the fallbacks in VoronoiTieredBiomeSource —
+    defaults to 1500/1500/600 if the fields aren't set."""
     data = json.loads(DIMENSION_JSON.read_text())
     bs = data["generator"]["biome_source"]
-    return bs.get("medium_min_radius", 1500), bs.get("hard_min_radius", 1500)
+    return (
+        bs.get("medium_min_radius", 1500),
+        bs.get("hard_min_radius", 1500),
+        bs.get("floor_jitter", 600),
+    )
 
 
-def apply_floor(tier: str, dist_sq: float, medium_min_sq: float, hard_min_sq: float) -> str:
-    """Same cascade as Kotlin floor(): downgrade a tier when we're too close to origin."""
+FLOOR_NOISE_SCALE = 1500  # must match VoronoiTieredBiomeSource.FLOOR_NOISE_SCALE
+
+
+def _hash_unit(ix: int, iz: int) -> float:
+    """Java-int-equivalent hash → unit float. Mirrors VoronoiSeedMath.hashUnit."""
+    mask = 0xFFFFFFFF
+    h = (ix * 0x85EBCA77) & mask
+    h ^= (iz * 0xC2B2AE3D) & mask
+    h ^= (h >> 16) & mask
+    h = (h * 0x85EBCA6B) & mask
+    h ^= (h >> 13) & mask
+    return (h & 0x7FFFFFFF) / 0x7FFFFFFF
+
+
+def value_noise_2d(world_x: int, world_z: int, scale: int = FLOOR_NOISE_SCALE) -> float:
+    """Mirrors VoronoiSeedMath.valueNoise2D — coherent value noise in [-1, +1]."""
+    cx = world_x // scale
+    cz = world_z // scale
+    fx = (world_x - cx * scale) / scale
+    fz = (world_z - cz * scale) / scale
+    a = _hash_unit(cx, cz)
+    b = _hash_unit(cx + 1, cz)
+    c = _hash_unit(cx, cz + 1)
+    d = _hash_unit(cx + 1, cz + 1)
+    sx = fx * fx * (3 - 2 * fx)
+    sz = fz * fz * (3 - 2 * fz)
+    top = a + (b - a) * sx
+    bot = c + (d - c) * sx
+    return (top + (bot - top) * sz) * 2 - 1
+
+
+def jittered_floor_sq(world_x: int, world_z: int, base_radius: int, jitter: int) -> float:
+    """Mirrors VoronoiTieredBiomeSource.jitteredFloorSq."""
+    if jitter == 0:
+        return base_radius * base_radius
+    n = value_noise_2d(world_x, world_z)
+    r = max(0, int(base_radius + n * jitter))
+    return r * r
+
+
+def apply_floor(
+    tier: str,
+    world_x: int,
+    world_z: int,
+    dist_sq: float,
+    medium_min: int,
+    hard_min: int,
+    jitter: int,
+) -> str:
+    """Same cascade as Kotlin resolveTier(): downgrade a tier when we're too
+    close to origin, with the floor radii jittered per-cell so the easy/medium
+    boundary is wavy not circular."""
     if tier == "easy":
         return "easy"
+    medium_floor_sq = jittered_floor_sq(world_x, world_z, medium_min, jitter)
     if tier == "medium":
-        return "easy" if dist_sq < medium_min_sq else "medium"
-    if dist_sq < medium_min_sq:
+        return "easy" if dist_sq < medium_floor_sq else "medium"
+    hard_floor_sq = jittered_floor_sq(world_x, world_z, hard_min, jitter)
+    if dist_sq < medium_floor_sq:
         return "easy"
-    if dist_sq < hard_min_sq:
+    if dist_sq < hard_floor_sq:
         return "medium"
     return "hard"
 
@@ -91,13 +146,11 @@ def nearest_seed(x: float, z: float, seeds: list[dict]) -> dict:
     return best
 
 
-def render_tier_field(seeds: list[dict], medium_min: int, hard_min: int) -> Image.Image:
+def render_tier_field(seeds: list[dict], medium_min: int, hard_min: int, jitter: int) -> Image.Image:
     """Produce the base voronoi tier raster (no overlays), with floor rules applied."""
     img = Image.new("RGB", (IMG_SIZE, IMG_SIZE), OCEAN)
     pixels = img.load()
     border_sq = WORLD_HALF * WORLD_HALF
-    medium_min_sq = medium_min * medium_min
-    hard_min_sq = hard_min * hard_min
     for py in range(IMG_SIZE):
         for px in range(IMG_SIZE):
             x, z = px_to_world(px, py)
@@ -105,20 +158,22 @@ def render_tier_field(seeds: list[dict], medium_min: int, hard_min: int) -> Imag
             if dist_sq > border_sq:
                 continue  # outside world border stays ocean
             seed = nearest_seed(x, z, seeds)
-            tier = apply_floor(seed["tier"], dist_sq, medium_min_sq, hard_min_sq)
+            tier = apply_floor(seed["tier"], int(x), int(z), dist_sq, medium_min, hard_min, jitter)
             pixels[px, py] = TIER_COLOURS[tier]
     return img
 
 
-def overlay_common(draw: ImageDraw.ImageDraw, seeds: list[dict]) -> None:
+def overlay_common(draw: ImageDraw.ImageDraw, seeds: list[dict], medium_min: int) -> None:
     cx, cy = world_to_px(0, 0)
-    # Guide ring at r=2400 (medium tier target) and r=4000 (hard tier target).
-    for r_world, tag in ((2400, "r=2400"), (4000, "r=4000")):
-        r_px = int(r_world * PX_PER_BLOCK)
-        draw.ellipse(
-            (cx - r_px, cy - r_px, cx + r_px, cy + r_px),
-            outline=GUIDE_COLOUR, width=1,
-        )
+    # Guide ring at the medium_min_radius — the *base* for the easy core. The
+    # actual easy/medium boundary scallops in/out by ±floor_jitter around this
+    # radius, but the ring is still a useful "this is what an unjittered floor
+    # would look like" reference.
+    r_px = int(medium_min * PX_PER_BLOCK)
+    draw.ellipse(
+        (cx - r_px, cy - r_px, cx + r_px, cy + r_px),
+        outline=GUIDE_COLOUR, width=1,
+    )
     # World border at r=5000
     r_px = int(WORLD_HALF * PX_PER_BLOCK)
     draw.ellipse(
@@ -133,7 +188,7 @@ def overlay_common(draw: ImageDraw.ImageDraw, seeds: list[dict]) -> None:
         draw.ellipse((px - r, py - r, px + r, py + r), fill=SEED_DOT, outline=(255, 255, 255))
 
 
-def annotate(img: Image.Image, seeds: list[dict]) -> Image.Image:
+def annotate(img: Image.Image, seeds: list[dict], medium_min: int) -> Image.Image:
     out = img.copy()
     draw = ImageDraw.Draw(out, "RGBA")
 
@@ -148,7 +203,7 @@ def annotate(img: Image.Image, seeds: list[dict]) -> Image.Image:
         draw.line((0, py, IMG_SIZE, py), fill=(255, 255, 255, 40), width=1)
         draw.text((2, py + 2), f"{w}", fill=(255, 255, 255, 200))
 
-    overlay_common(draw, seeds)
+    overlay_common(draw, seeds, medium_min)
 
     # Seed labels
     for i, s in enumerate(seeds):
@@ -173,10 +228,10 @@ def annotate(img: Image.Image, seeds: list[dict]) -> Image.Image:
     return out
 
 
-def plain(img: Image.Image, seeds: list[dict]) -> Image.Image:
+def plain(img: Image.Image, seeds: list[dict], medium_min: int) -> Image.Image:
     out = img.copy()
     draw = ImageDraw.Draw(out, "RGBA")
-    overlay_common(draw, seeds)
+    overlay_common(draw, seeds, medium_min)
     return out
 
 
@@ -196,13 +251,13 @@ def reachability_report(seeds: list[dict]) -> list[str]:
 def main() -> None:
     RENDER_DIR.mkdir(parents=True, exist_ok=True)
     seeds = load_seeds()
-    medium_min, hard_min = load_min_radii()
+    medium_min, hard_min, jitter = load_floor_params()
 
     counts = {"easy": 0, "medium": 0, "hard": 0}
     for s in seeds:
         counts[s["tier"]] += 1
     print(f"Loaded {len(seeds)} seeds: {counts}")
-    print(f"medium_min_radius = {medium_min}, hard_min_radius = {hard_min}")
+    print(f"medium_min_radius = {medium_min}, hard_min_radius = {hard_min}, floor_jitter = {jitter}")
 
     issues = reachability_report(seeds)
     if issues:
@@ -213,13 +268,13 @@ def main() -> None:
         print("All seeds reachable (each is nearest to its own position).")
 
     print("Rendering tier field… (this takes a few seconds)")
-    base = render_tier_field(seeds, medium_min, hard_min)
+    base = render_tier_field(seeds, medium_min, hard_min, jitter)
 
     out_plain = RENDER_DIR / "tier_voronoi.png"
     out_annot = RENDER_DIR / "tier_voronoi_annotated.png"
 
-    plain(base, seeds).save(out_plain)
-    annotate(base, seeds).save(out_annot)
+    plain(base, seeds, medium_min).save(out_plain)
+    annotate(base, seeds, medium_min).save(out_annot)
 
     print(f"Wrote {out_plain}")
     print(f"Wrote {out_annot}")

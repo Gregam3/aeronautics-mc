@@ -1,0 +1,43 @@
+modLoader="kotlinforforge"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Player-to-player auction house. Place an Auction House block and right-click
+to open the GUI. List item stacks at a fixed spur price. Other players can
+browse and buy — payment routes directly to the seller's Numismatics bank
+account. Sellers can cancel their own listings to retrieve the items.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kotlinforforge"
+    type="required"
+    versionRange="[5.9.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="numismatics"
+    type="required"
+    versionRange="[1.0.20,)"
+    ordering="AFTER"
+    side="BOTH"

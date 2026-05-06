@@ -1,0 +1,10 @@
+{
+  "_comment": "Caero override of sable:super_light. Removes wool/wooden_slabs/wooden_stairs so they default to medium mass (1.0). The matching ADD of caero_specialization:super_light_planks lives in the caero_specialization mod's own data/sable/tags/block/super_light.json.",
+  "replace": false,
+  "values": [],
+  "remove": [
+    "#minecraft:wool",
+    "#minecraft:wooden_slabs",
+    "#minecraft:wooden_stairs"
+  ]
+}

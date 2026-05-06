@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "PhysicsBlockPropertyHelperMixin",
-    "MergedMassTrackerMixin"
+    "MergedMassTrackerMixin",
+    "PlayerWeightHandlerMixin"
   ],
   "client": [],
   "server": [],

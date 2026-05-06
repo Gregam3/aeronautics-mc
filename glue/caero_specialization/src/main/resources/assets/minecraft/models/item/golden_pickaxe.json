@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "minecraft:item/golden_pickaxe"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.0
+      },
+      "model": "caero_specialization:item/golden_pickaxe_unrefined"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.3
+      },
+      "model": "caero_specialization:item/golden_pickaxe_low"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.6
+      },
+      "model": "caero_specialization:item/golden_pickaxe_medium"
+    },
+    {
+      "predicate": {
+        "caero_specialization:quality": 0.9
+      },
+      "model": "caero_specialization:item/golden_pickaxe_high"
+    }
+  ]
+}

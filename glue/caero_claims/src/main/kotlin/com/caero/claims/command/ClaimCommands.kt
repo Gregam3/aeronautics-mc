@@ -1,6 +1,7 @@
 package com.caero.claims.command
 
 import com.caero.claims.CaeroClaims
+import com.caero.claims.config.CaeroClaimsConfig
 import com.caero.claims.data.ClaimDimensionData
 import com.caero.claims.service.ServerClaimService
 import com.mojang.brigadier.CommandDispatcher
@@ -60,6 +61,22 @@ object ClaimCommands {
                         )
                         1
                     },
+                )
+                .then(
+                    Commands.literal("admin-wand")
+                        .requires { it.hasPermission(2) }
+                        .executes { ctx ->
+                            val player = ctx.source.playerOrException
+                            val stack = net.minecraft.world.item.ItemStack(CaeroClaims.ADMIN_CLAIM_WAND.get())
+                            if (!player.inventory.add(stack)) {
+                                player.drop(stack, false)
+                            }
+                            player.sendSystemMessage(
+                                Component.literal("Admin Claim Wand granted. Claims are FREE and owned by Admin.")
+                                    .withStyle(ChatFormatting.GOLD),
+                            )
+                            1
+                        },
                 ),
         )
     }
@@ -136,6 +153,7 @@ object ClaimCommands {
                                 },
                         ),
                 )
+                .then(ConfigCommand.build(CaeroClaimsConfig.SPEC))
                 .then(
                     Commands.literal("test")
                         .executes { ctx ->

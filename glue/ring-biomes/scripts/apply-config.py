@@ -93,6 +93,10 @@ BIC_BOSS_EXCLUDE = {
     'supreme_bonescaller',
     'dire_hound_leader',
     'dark_vortex',
+    # BiC's aquatic mobs spawn at water-surface and clip onto land — don't boost.
+    'corpse_fish',
+    'glutton_fish',
+    'thornshell_crab',
 }
 
 def format_factor(f):

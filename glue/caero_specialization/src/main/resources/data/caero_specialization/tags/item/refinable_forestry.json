@@ -2,6 +2,8 @@
   "replace": false,
   "values": [
     "minecraft:charcoal",
-    "minecraft:coal"
+    "minecraft:coal",
+    "#minecraft:logs",
+    "#minecraft:planks"
   ]
 }

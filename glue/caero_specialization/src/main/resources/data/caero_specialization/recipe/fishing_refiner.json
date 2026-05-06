@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:false"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "CPC",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "P": {
+      "item": "minecraft:fishing_rod"
+    }
+  },
+  "result": {
+    "id": "caero_specialization:fishing_refiner",
+    "count": 1
+  }
+}

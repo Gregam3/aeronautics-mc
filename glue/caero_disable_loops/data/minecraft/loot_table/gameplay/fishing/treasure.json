@@ -1,0 +1,31 @@
+{
+  "_comment": "Caero override: vanilla fishing treasure pool stripped to junk only. Removes name_tag/saddle/bow/enchanted_book/fishing_rod/lily_pad/nautilus_shell — these short-circuit progression by giving end-game items to AFK fishers (closes exploits Hu1 + Hu4). HUNTER's actual valuable byproducts come from the FISHING REFINER + mob hunting, not vanilla fishing loot.",
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:string",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:bone",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:rotten_flesh",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:bowl",
+          "weight": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+site_name: Caero Wiki
+site_description: Player-facing reference for the Caero modded Minecraft server
+site_url: http://46.225.17.145/
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue grey
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+
+nav:
+  - Home: index.md
+  - Joining: joining.md
+  - The world: world.md
+  - Survival pressure: survival.md
+  - Land claims: claims.md
+  - Specialization & quality: specialization.md
+  - Vitality (death penalty): vitality.md
+  - Biome tiers: biome-tiers.md
+  - What's disabled: disabled.md
+  - Full mod list: mods.md
+  - Patch notes: changelog.md
+
+extra:
+  social: []
+  generator: false
+
+copyright: Caero — a small modded Minecraft server

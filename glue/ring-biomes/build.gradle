@@ -114,6 +114,16 @@ dependencies {
     compileOnly files("libs/sable-companion-common-1.21.1-1.5.0.jar")
     compileOnly files("libs/encumbered-1.21.1-1.0.0.jar")
     compileOnly files("libs/open-parties-and-claims-neoforge-1.21.1-0.26.1.jar")
+    compileOnly files("libs/ToughAsNails-neoforge-1.21.1-10.1.0.13.jar")
+    // Sibling glue mod — used by ClaimOwnerLookup to resolve claim owner at the
+    // player's position. Soft dep in mods.toml; lookup gracefully falls through
+    // if absent at runtime.
+    compileOnly files("libs/caero_claims-0.1.0.jar")
+    // Sibling glue mod — used by PlayerWeightHandlerMixin to read item Quality
+    // and apply the per-stack weight scaling for refinable armourer items
+    // (shields, swords, armour). Soft dep in mods.toml; mixin no-ops if the
+    // mod is absent (REFINABLE_ARMOURER tag won't match anything).
+    compileOnly files("libs/caero_specialization-0.1.0.jar")
 
     // Same jars at dev runtime so runClient/runServer/runGameTestServer can boot
     // with the mixin actually applied. Production runtime gets these from the

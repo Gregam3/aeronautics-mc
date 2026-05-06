@@ -1,0 +1,10 @@
+{
+  "_comment": "Caero override of sable:light. Removes vanilla planks/wooden_slabs/wooden_stairs so they default to medium mass (1.0). The matching ADD of caero_specialization:light_planks lives in the caero_specialization mod's own data/sable/tags/block/light.json so the entry survives even if this datapack is removed.",
+  "replace": false,
+  "values": [],
+  "remove": [
+    "#minecraft:planks",
+    "#minecraft:wooden_slabs",
+    "#minecraft:wooden_stairs"
+  ]
+}

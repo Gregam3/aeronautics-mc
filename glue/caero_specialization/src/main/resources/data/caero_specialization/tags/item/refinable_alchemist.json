@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:potion",
+    "minecraft:splash_potion",
+    "minecraft:lingering_potion",
+    "caero_specialization:ash",
+    "caero_specialization:ore_dust",
+    "caero_specialization:fish_eye",
+    "caero_specialization:fish_scale",
+    "caero_specialization:fish_oil"
+  ]
+}

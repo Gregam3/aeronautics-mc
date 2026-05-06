@@ -41,4 +41,28 @@ class RefinerBlock(properties: Properties, val skill: SkillKind) : Block(propert
             skill.id, pos, player.gameProfile.name, player.uuid,
         )
     }
+
+    /**
+     * Drop the BE's loaded inventory (input + catalysts + output) when the
+     * block is broken — otherwise loaded items would silently vanish. Coffer
+     * spurs are intentionally NOT auto-dropped (owner uses /caero-spec withdraw).
+     */
+    @Deprecated("Deprecated in Java")
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onRemove(
+        state: BlockState,
+        level: Level,
+        pos: BlockPos,
+        newState: BlockState,
+        movedByPiston: Boolean,
+    ) {
+        if (!state.`is`(newState.block)) {
+            (level.getBlockEntity(pos) as? RefinerBlockEntity)?.let { be ->
+                for (stack in be.dropInventoryContents()) {
+                    Block.popResource(level, pos, stack)
+                }
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston)
+    }
 }

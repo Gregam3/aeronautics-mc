@@ -1,0 +1,24 @@
+{
+  "type": "caero_specialization:quality_shapeless",
+  "category": "building",
+  "group": "planks",
+  "ingredient": {
+    "tag": "minecraft:crimson_logs"
+  },
+  "unrefined_result": {
+    "id": "minecraft:crimson_planks",
+    "count": 2
+  },
+  "low_result": {
+    "id": "minecraft:crimson_planks",
+    "count": 4
+  },
+  "medium_result": {
+    "id": "minecraft:crimson_planks",
+    "count": 6
+  },
+  "high_result": {
+    "id": "minecraft:crimson_planks",
+    "count": 8
+  }
+}

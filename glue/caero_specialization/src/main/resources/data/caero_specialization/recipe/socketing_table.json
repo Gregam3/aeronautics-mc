@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "PSP",
+    "PPP"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "P": { "item": "minecraft:smooth_stone" },
+    "S": { "item": "minecraft:smithing_table" }
+  },
+  "result": {
+    "id": "caero_specialization:socketing_table",
+    "count": 1
+  }
+}
