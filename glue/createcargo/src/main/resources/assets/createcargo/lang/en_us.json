@@ -1,0 +1,17 @@
+{
+  "block.createcargo.small_container": "Small Shipping Container",
+  "block.createcargo.medium_container": "Medium Shipping Container",
+  "block.createcargo.large_container": "Large Shipping Container",
+  "block.createcargo.container_frame": "Container Frame",
+  "item.createcargo.small_container": "Small Shipping Container",
+  "item.createcargo.medium_container": "Medium Shipping Container",
+  "item.createcargo.large_container": "Large Shipping Container",
+  "container.createcargo.small_container": "Small Shipping Container",
+  "container.createcargo.medium_container": "Medium Shipping Container",
+  "container.createcargo.large_container": "Large Shipping Container",
+  "item.createcargo.shipping_container_key": "Shipping Container Key",
+  "message.createcargo.no_key": "You need a Shipping Container Key to open this.",
+  "itemGroup.createcargo": "Create Cargo",
+  "block.createcargo.cargo_funnel": "Cargo Funnel",
+  "item.createcargo.cargo_funnel": "Cargo Funnel"
+}

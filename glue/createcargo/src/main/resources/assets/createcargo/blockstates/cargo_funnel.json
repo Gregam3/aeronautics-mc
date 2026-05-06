@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "createcargo:block/cargo_funnel" },
+    "facing=south": { "model": "createcargo:block/cargo_funnel", "y": 180 },
+    "facing=east":  { "model": "createcargo:block/cargo_funnel", "y": 90 },
+    "facing=west":  { "model": "createcargo:block/cargo_funnel", "y": 270 },
+    "facing=up":    { "model": "createcargo:block/cargo_funnel", "x": 270 },
+    "facing=down":  { "model": "createcargo:block/cargo_funnel", "x": 90 }
+  }
+}

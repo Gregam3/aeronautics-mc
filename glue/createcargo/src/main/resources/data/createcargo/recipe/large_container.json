@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "IMI",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_block" },
+    "M": { "item": "createcargo:medium_container" }
+  },
+  "result": {
+    "id": "createcargo:large_container",
+    "count": 1
+  }
+}

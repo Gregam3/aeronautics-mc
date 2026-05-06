@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "createcargo:block/container_frame" }
+  }
+}

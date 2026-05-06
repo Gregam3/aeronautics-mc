@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "ISI",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "item": "createcargo:small_container" }
+  },
+  "result": {
+    "id": "createcargo:medium_container",
+    "count": 1
+  }
+}
