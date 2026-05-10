@@ -302,3 +302,67 @@ runtime-affecting change. Format: `- [date] mod — what changed → what to ver
   porous transition Y=30-65 (sea may be spilling in if zone borders an
   ocean) → land in open cavern around Y=10 → mid-walking level Y=0-8 →
   iconic nether feel.
+- 2026-05-10 Karos atmosphere overrides — 9 vanilla biome JSONs overridden
+  in the karos-datapack at data/minecraft/worldgen/biome/*.json. Each
+  copies vanilla effects then patches:
+    sky_color: very dark (0x0A0202 nether_wastes, 0x140404 crimson_forest,
+        0x041014 warped_forest, 0x06080A soul_sand_valley, 0x0A0A0A
+        basalt_deltas, 0x000000 all end biomes)
+    fog_color: aggressive (deeper red for nether, deep purple for end)
+    particle: bumped probabilities + scarier particle types where
+        applicable (soul_fire_flame in nether_wastes, doubled crimson_spore
+        in crimson_forest, doubled ash in soul_sand_valley)
+  Sounds and music preserved from vanilla — already nether-themed.
+  KNOWN LIMIT: sun + clouds remain visible because dimension type is
+  overworld, and dimension type controls sun/cloud rendering not biome
+  effects. The dark sky_color tints what's visible but doesn't disable
+  sun/clouds entirely. Truly removing them needs a custom dimension type
+  (which would affect the whole world, not just nether zones) or a
+  client mod with mixins. **New world.** Test: enter painted Nether,
+  look around — should feel much darker/redder/eerie compared to before.
+  Sun visible faintly through dark fog.
+- 2026-05-10 caero_atlas v3.1 — End fixes:
+  * Island band shifted up: was Y=50-85 (mostly underwater), now Y=85-110
+    (clearly above water surface Y=65 with ~20 block air gap)
+  * sloped_cheese amplifier 2.5→3.0 for chunkier "giant" islands
+  * Top cap raised from Y=95 → Y=125 so the island zone has more height
+  * deep_water_bias extended to Y=75 (was Y=10) so no stragglers form
+    below the intended island band
+  * Overhead biome dispatch dropped for End columns — end_highlands etc.
+    extend up to the islands themselves, so atmosphere on the islands is
+    end-themed (dark purple/black sky from our atmosphere overrides) not
+    plains-blue. Nether overhead unchanged.
+  **New world.** /tp @s -1038 150 -2253 → fall through purple sky to
+  open air above the deep ocean → land on giant end_stone islands at
+  Y=85-110 → look down to see ocean surface Y=65 with seafloor far
+  below.
+- 2026-05-10 New mask v2 deployed. Greg repainted the world. Major shifts:
+    background: cold_ocean 24%→0.4%, deep_ocean 10%→39% (bulk of map is
+        now deep ocean, not cold ocean)
+    sky_placeholder removed entirely (was 1.6% scattered pink dots)
+    Nether much more isolated at the south, bordered by deep ocean
+    End at the top, cleanly bordered by deep ocean
+    Spawn lime in the center, surrounded by warm ocean ring
+    Image: 804x806 (was 754x742). Generator handles any size; world size
+    auto-derived from --world-size flag.
+  Datapack regenerated, numbered overlay updated, deployed to Prism
+  config/paxi/datapacks/karos-datapack. **New world** to test.
+- 2026-05-10 Tectonic config retuned for dramatic peaks. Greg said the
+  world felt "less interesting" / "regions should be a guideline not a
+  hard border" / "mountains should be very drastic". Reverted my earlier
+  conservative tuning back toward Tectonic defaults for the noise-scale
+  knobs (so painted regions feel less like rigid blocks of biome) and
+  bumped the vertical drama way up:
+    biomes.temperature_scale:     0.5  → 0.25 (LARGER biome regions)
+    biomes.vegetation_scale:      0.5  → 0.25 (LARGER biome regions)
+    continents.continents_scale:  0.25 → 0.13 (LARGER continents)
+    global_terrain.vertical_scale:  1.05 → 1.5
+    global_terrain.elevation_boost: 0.0  → 2.0  ← biggest unlock; per
+        Tectonic's tooltip this scales MOUNTAINS faster than lowlands,
+        so spawn/plains stay normal-tall while painted gray (high
+        mountain) zones become truly drastic.
+  Tectonic tooltip notes vertical_scale "Game restart required on 1.20!"
+  — likely true on 1.21 too. Restart MC + create new world to see.
+  If still not dramatic enough at the gray mountain zones specifically,
+  next step is fork-level: select_by_biome_color with a positive density
+  bias in mountain colors (=> per-painted-zone terrain shape).

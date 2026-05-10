@@ -211,14 +211,17 @@ def write_map_info(color_table: list[tuple[tuple[int,int,int], str, int]]) -> di
         {"biome": biome, "color": "#{:02X}{:02X}{:02X}".format(*rgb)}
         for rgb, biome, _zid in color_table
     ]
-    # Above sea level (Y > 64), painted Nether and End columns return
+    # Above sea level (Y > 64), painted NETHER columns return
     # `minecraft:plains` instead of their painted biome — gives overworld
-    # sky/fog atmosphere above the closed roof. The shifted nether density
-    # already produces no terrain above Y=63, so what's there is open air
-    # under a normal-looking sky.
+    # sky/fog atmosphere above the closed roof.
+    # END columns are NOT in the overhead set: the floating islands sit
+    # ABOVE sea level (Y=85-110), so we want end biome atmosphere
+    # (dark purple sky from our atmosphere overrides) all the way up,
+    # not plains. Players walking on end islands should feel "the End",
+    # not a vacation field.
     overhead_colors = [
         "#{:02X}{:02X}{:02X}".format(*rgb)
-        for rgb, _biome, zid in color_table if zid in (5, 10)
+        for rgb, _biome, zid in color_table if zid == 5  # nether only
     ]
     # No `scaling` block: NovoAtlas 1.1.0 (the only version available for
     # 1.21.1 NeoForge) does not understand horizontal_scale — it was added
@@ -400,15 +403,16 @@ NETHER_FINAL_DENSITY = {
 # bias + island-zone positive bump + top air cap. The four Y-gradients sum
 # linearly to give the bands above.
 END_FINAL_DENSITY = {
+    # Island band shifted UP to Y=85-110 so islands are clearly floating
+    # ABOVE sea level (Y=65) with ~20 blocks of open air between water
+    # surface and island bottoms. Earlier version placed islands at Y=50-85
+    # which made most island mass underwater.
     "type": "minecraft:add",
-    # Island shape noise — amplified so peaks form sizeable end_stone chunks
-    # (the "giant" floating end Greg wanted).
     "argument1": {
         "type": "minecraft:mul",
-        "argument1": 2.5,
+        "argument1": 3.0,  # bumped from 2.5 for "giant" feel
         "argument2": "minecraft:end/sloped_cheese",
     },
-    # Composite Y-bias: seafloor + deep_water_bias + island_bump + top_cap.
     "argument2": {
         "type": "minecraft:add",
         "argument1": {
@@ -419,28 +423,32 @@ END_FINAL_DENSITY = {
                 "from_value":  5.0, "from_y": -30,
                 "to_value":    0.0, "to_y":   -10,
             },
-            # deep_water_bias: 0 at Y=-10, -3 at Y=10 onwards (kills land in
-            # the water column).
+            # deep_water_bias: -2 at Y=-10 ramping to -3 at Y=75 — strong
+            # negative across the entire water column AND the air gap
+            # above the water surface. Makes sure no straggler islands
+            # appear below the intended island band.
             "argument2": {
                 "type": "minecraft:y_clamped_gradient",
-                "from_value":  0.0, "from_y": -10,
-                "to_value":   -3.0, "to_y":   10,
+                "from_value":  -2.0, "from_y": -10,
+                "to_value":    -3.0, "to_y":   75,
             },
         },
         "argument2": {
             "type": "minecraft:add",
-            # island_bump: +3 around Y=60-80 — cancels the deep_water_bias and
-            # gives a solid-leaning bias so sloped_cheese peaks become islands.
+            # island_bump: +3 by Y=90 — cancels the deep_water_bias and
+            # the sloped_cheese amplitude exceeds the small remaining
+            # negative, producing big island chunks.
             "argument1": {
                 "type": "minecraft:y_clamped_gradient",
-                "from_value":  0.0, "from_y": 50,
-                "to_value":    3.0, "to_y":   70,
+                "from_value":  0.0, "from_y": 75,
+                "to_value":    3.0, "to_y":   90,
             },
-            # top_cap: -10 above Y=95 — absolutely no islands above this.
+            # top_cap: -10 above Y=125 — caps the island band, no spires
+            # going to the world ceiling.
             "argument2": {
                 "type": "minecraft:y_clamped_gradient",
-                "from_value":  0.0,  "from_y": 80,
-                "to_value":  -10.0,  "to_y":   95,
+                "from_value":  0.0,  "from_y": 110,
+                "to_value":  -10.0,  "to_y":   125,
             },
         },
     },
@@ -454,6 +462,87 @@ def write_pack_meta() -> dict:
             "description": "Caero Karos worldgen — image-driven biome map (NovoAtlas).",
         }
     }
+
+
+def write_biome_atmosphere_overrides(out_dir: Path):
+    """Override vanilla nether/end biome `effects` to be dark/eerie when
+    rendered inside the overworld dimension. The vanilla biomes set
+    sky_color to overworld-blue (because vanilla relies on the Nether
+    dimension type to make the sky red). We replace those with very dark
+    palettes so painted Nether/End zones feel oppressive even with the
+    overworld sun + clouds visible.
+
+    Each override copies vanilla `effects` and changes:
+      - sky_color: very dark, biome-themed
+      - fog_color: aggressive (deeper red for nether, deep purple for end)
+      - particle: bumped probability + scarier particle types
+    Other fields (sounds, music) preserved.
+    """
+    overrides = {
+        # Nether biomes (very dark red/blackened sky + heavy fog)
+        "minecraft:nether_wastes": {
+            "sky_color": 0x0A0202,
+            "fog_color": 0x33141C,
+            "particle": {"options": {"type": "minecraft:soul_fire_flame"},
+                         "probability": 0.001},
+        },
+        "minecraft:crimson_forest": {
+            "sky_color": 0x140404,
+            "fog_color": 0x330D0D,
+            "particle": {"options": {"type": "minecraft:crimson_spore"},
+                         "probability": 0.05},  # bumped from vanilla 0.025
+        },
+        "minecraft:warped_forest": {
+            "sky_color": 0x041014,
+            "fog_color": 0x0A2A30,
+            "particle": {"options": {"type": "minecraft:warped_spore"},
+                         "probability": 0.05},
+        },
+        "minecraft:soul_sand_valley": {
+            "sky_color": 0x06080A,
+            "fog_color": 0x10303A,
+            "particle": {"options": {"type": "minecraft:ash"},
+                         "probability": 0.025},  # bumped from 0.00625
+        },
+        "minecraft:basalt_deltas": {
+            "sky_color": 0x0A0A0A,
+            "fog_color": 0x4F2810,
+            "particle": {"options": {"type": "minecraft:white_ash"},
+                         "probability": 0.12},  # vanilla 0.118275
+        },
+        # End biomes (very dark purple/void sky)
+        "minecraft:end_highlands": {"sky_color": 0x000000, "fog_color": 0xA080A0},
+        "minecraft:end_midlands":  {"sky_color": 0x000000, "fog_color": 0xA080A0},
+        "minecraft:end_barrens":   {"sky_color": 0x000000, "fog_color": 0xA080A0},
+        "minecraft:small_end_islands": {"sky_color": 0x000000, "fog_color": 0xA080A0},
+    }
+    # Vanilla biome JSONs come bundled with the server. We have to provide
+    # the FULL biome JSON in the override (datapack overrides replace, not
+    # merge). Use a server-jar-extracted vanilla JSON as the base, then
+    # patch the effects fields. The unpacked vanilla JSONs sit next to the
+    # server-extra.jar which the test harness has already pulled.
+    import zipfile
+    jar = Path("/tmp/aero-s3-karos-test/libraries/net/minecraft/server/"
+               "1.21.1-20240808.144430/server-1.21.1-20240808.144430-extra.jar")
+    if not jar.exists():
+        print(f"  (skipping atmosphere overrides — vanilla data jar not found at {jar}; "
+              f"run season3/test/karos-mapgen/run.sh once to fetch it)")
+        return
+    out_biome_dir = out_dir / "data" / "minecraft" / "worldgen" / "biome"
+    out_biome_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(jar) as z:
+        for biome_id, patch in overrides.items():
+            ns, name = biome_id.split(":", 1)
+            entry = f"data/{ns}/worldgen/biome/{name}.json"
+            try:
+                base = json.loads(z.read(entry).decode("utf-8"))
+            except KeyError:
+                print(f"  (skipping {biome_id} — not in vanilla data jar)")
+                continue
+            base["effects"] = {**base["effects"], **patch}
+            out_path = out_biome_dir / f"{name}.json"
+            out_path.write_text(json.dumps(base, indent=2) + "\n")
+            print(f"  -> {out_path.relative_to(out_dir)}")
 
 
 def main():
@@ -551,6 +640,9 @@ def main():
     OUT_END_FINAL.write_text(json.dumps(END_FINAL_DENSITY, indent=2) + "\n")
     print(f"  -> {OUT_NETHER_FINAL}")
     print(f"  -> {OUT_END_FINAL}")
+
+    print("Writing biome atmosphere overrides ...")
+    write_biome_atmosphere_overrides(DP)
 
     print("Writing pack.mcmeta ...")
     OUT_PACK_META.write_text(json.dumps(write_pack_meta(), indent=2) + "\n")

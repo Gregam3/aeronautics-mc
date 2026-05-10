@@ -178,10 +178,6 @@
         "color": "#01ABB4"
       },
       {
-        "biome": "minecraft:cold_ocean",
-        "color": "#FF025A"
-      },
-      {
         "biome": "minecraft:plains",
         "color": "#0FB300"
       },
@@ -214,11 +210,7 @@
         "#ED0202",
         "#EE0303",
         "#EF0404",
-        "#F00505",
-        "#DF08EE",
-        "#E009EF",
-        "#E10AF0",
-        "#E20BF1"
+        "#F00505"
       ]
     }
   }
