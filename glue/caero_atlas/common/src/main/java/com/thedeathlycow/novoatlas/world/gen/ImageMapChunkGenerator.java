@@ -60,10 +60,17 @@ public class ImageMapChunkGenerator extends NoiseBasedChunkGenerator {
             DensityFunction undergroundDensityFunction,
             boolean enableCarvers
     ) {
-        super(
-                biomeSource,
-                applyHeightMapToDensityFunctions(settings, mapInfo, undergroundDensityFunction)
-        );
+        // Karos fork: pass `settings` through unchanged. Upstream NovoAtlas
+        // wraps it with applyHeightMapToDensityFunctions which clamps the
+        // final_density at the painted heightmap PNG, producing flat
+        // heightmap-driven terrain. We want the registry's vanilla
+        // (Tectonic-wrapped) final_density to drive terrain shape so the
+        // overworld looks like Tectonic everywhere except where Lithostitched
+        // wraps it with our select_by_biome_color (Nether/End regions).
+        // The undergroundDensityFunction field is retained for codec
+        // back-compat but unused; remapBlockForBiome() in doFill handles
+        // Nether/End block palette per cell.
+        super(biomeSource, settings);
         this.mapInfo = mapInfo;
         this.undergroundDensityFunction = undergroundDensityFunction;
         this.enableCarvers = enableCarvers;
@@ -140,10 +147,11 @@ public class ImageMapChunkGenerator extends NoiseBasedChunkGenerator {
         }
     }
 
-    @Override
-    public int getBaseHeight(int x, int z, Heightmap.Types types, LevelHeightAccessor levelHeightAccessor, RandomState randomState) {
-        return this.sampleElevation(x, z);
-    }
+    // Karos fork: drop the heightmap-based getBaseHeight override. With
+    // vanilla terrain driving shape, the painted heightmap PNG no longer
+    // matches the actual surface Y; using it for /locate teleports would
+    // drop players inside a Tectonic mountain. Defer to super.
+    // @Override int getBaseHeight(...) — no override
 
     /**
      * A debofuscated reimplementation of {@link NoiseBasedChunkGenerator#doFill(Blender, StructureManager, RandomState, ChunkAccess, int, int)}
@@ -304,7 +312,28 @@ public class ImageMapChunkGenerator extends NoiseBasedChunkGenerator {
             return isNether ? Blocks.NETHERRACK.defaultBlockState() : Blocks.END_STONE.defaultBlockState();
         }
         if (original.is(Blocks.WATER)) {
-            return isNether ? Blocks.LAVA.defaultBlockState() : Blocks.AIR.defaultBlockState();
+            // Nether: keep the cavern open (water → air) above Y=-30 so the
+            // overworld water aquifer doesn't flood the iconic walking level
+            // with water. Below Y=-30 convert water → lava — gives the deep
+            // lava sea matching vanilla's Y=32 lava sea (= our Y=-31 after
+            // shift). The visual of "sea flowing into the Nether" comes
+            // from runtime fluid spread at the painted-zone boundary, where
+            // ocean-column water sources are adjacent to nether-column air.
+            if (isNether) {
+                // Below Y=0 (lower cavern + floor): water → lava → forms the
+                // iconic lava sea on the netherrack floor mass.
+                // At Y >= 0 (upper cavern): water → air → keeps the walking
+                // level dry. Sea at zone boundaries can still spill in via
+                // runtime fluid spread.
+                return y < 0
+                        ? Blocks.LAVA.defaultBlockState()
+                        : Blocks.AIR.defaultBlockState();
+            }
+            // End: keep water — the karos End floats above a deep water
+            // column. Without this, aquifer water in painted End columns
+            // would be wiped to air, leaving us with empty void instead of
+            // the intended "ocean below the islands".
+            return original;
         }
         return original;
     }

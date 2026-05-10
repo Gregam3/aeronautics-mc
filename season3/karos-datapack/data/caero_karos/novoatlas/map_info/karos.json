@@ -22,6 +22,14 @@
         "color": "#024B02"
       },
       {
+        "biome": "regions_unexplored:redwoods",
+        "color": "#034C03"
+      },
+      {
+        "biome": "regions_unexplored:blackwood_taiga",
+        "color": "#044D04"
+      },
+      {
         "biome": "minecraft:deep_ocean",
         "color": "#0003B3"
       },
@@ -36,6 +44,18 @@
       {
         "biome": "minecraft:frozen_peaks",
         "color": "#454545"
+      },
+      {
+        "biome": "regions_unexplored:mountains",
+        "color": "#464646"
+      },
+      {
+        "biome": "regions_unexplored:towering_cliffs",
+        "color": "#474747"
+      },
+      {
+        "biome": "regions_unexplored:spires",
+        "color": "#484848"
       },
       {
         "biome": "minecraft:nether_wastes",
@@ -70,6 +90,18 @@
         "color": "#037103"
       },
       {
+        "biome": "regions_unexplored:cold_deciduous_forest",
+        "color": "#047204"
+      },
+      {
+        "biome": "regions_unexplored:cold_boreal_taiga",
+        "color": "#057305"
+      },
+      {
+        "biome": "regions_unexplored:silver_birch_forest",
+        "color": "#067406"
+      },
+      {
         "biome": "minecraft:stony_peaks",
         "color": "#888888"
       },
@@ -82,8 +114,32 @@
         "color": "#8A8A8A"
       },
       {
+        "biome": "regions_unexplored:arid_mountains",
+        "color": "#8B8B8B"
+      },
+      {
+        "biome": "regions_unexplored:chalk_cliffs",
+        "color": "#8C8C8C"
+      },
+      {
+        "biome": "regions_unexplored:rocky_meadow",
+        "color": "#8D8D8D"
+      },
+      {
         "biome": "minecraft:desert",
         "color": "#E2F700"
+      },
+      {
+        "biome": "regions_unexplored:saguaro_desert",
+        "color": "#E3F801"
+      },
+      {
+        "biome": "regions_unexplored:joshua_desert",
+        "color": "#E4F902"
+      },
+      {
+        "biome": "regions_unexplored:outback",
+        "color": "#E5FA03"
       },
       {
         "biome": "minecraft:badlands",
@@ -136,7 +192,34 @@
       {
         "biome": "minecraft:meadow",
         "color": "#11B502"
+      },
+      {
+        "biome": "regions_unexplored:clover_plains",
+        "color": "#12B603"
+      },
+      {
+        "biome": "regions_unexplored:flower_fields",
+        "color": "#13B704"
+      },
+      {
+        "biome": "regions_unexplored:prairie",
+        "color": "#14B805"
       }
-    ]
+    ],
+    "overhead": {
+      "above_y": 64,
+      "biome": "minecraft:plains",
+      "colors": [
+        "#EC0101",
+        "#ED0202",
+        "#EE0303",
+        "#EF0404",
+        "#F00505",
+        "#DF08EE",
+        "#E009EF",
+        "#E10AF0",
+        "#E20BF1"
+      ]
+    }
   }
 }

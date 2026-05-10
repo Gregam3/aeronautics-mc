@@ -24,6 +24,20 @@ FORK_JAR="$(ls $FORK_JAR_GLOB 2>/dev/null | grep -vE 'sources|shadow' | head -1 
 LITHOSTITCHED_URL="https://cdn.modrinth.com/data/XaDC71GB/versions/3yrFEAmj/lithostitched-1.7.3-neoforge-21.1.jar"
 LITHOSTITCHED_JAR="lithostitched-1.7.3-neoforge-21.1.jar"
 
+# Mods that contribute biomes referenced by the karos-datapack. Pulled
+# straight from the Prism instance so versions match what Greg actually plays.
+PRISM_MODS_DIR="${PRISM_MODS_DIR:-$HOME/.local/share/PrismLauncher/instances/1.21.1/minecraft/mods}"
+BIOME_MODS=(
+    "regions_unexplored-neoforge-1.21.1-0.5.9.jar"
+    # RU's deps (server-safe). Architectury is needed by some, GlitchCore is
+    # TerraBlender's pal. Match the exact versions Prism is running.
+    "TerraBlender-neoforge-1.21.1-4.1.0.8.jar"
+    "GlitchCore-neoforge-1.21.1-2.1.0.0.jar"
+    "architectury-13.0.8-neoforge.jar"
+    # Tectonic too — terrain shape comes from its Lithostitched wrappers
+    "tectonic-3.0.22-neoforge-21.1.jar"
+)
+
 DATAPACK_BIOME="$REPO_ROOT/season3/karos-datapack"
 DATAPACK_TERRAIN="$REPO_ROOT/season3/karos-terrain-overrides"
 
@@ -47,6 +61,14 @@ echo "[run]   $FORK_JAR -> $STAGING/mods/"
 if [[ ! -f "$STAGING/mods/$LITHOSTITCHED_JAR" ]]; then
     curl -fsSL -o "$STAGING/mods/$LITHOSTITCHED_JAR" "$LITHOSTITCHED_URL"
 fi
+# Biome-providing mods (regions_unexplored, etc.) — copied from Prism
+for biome_jar in "${BIOME_MODS[@]}"; do
+    if [[ -f "$PRISM_MODS_DIR/$biome_jar" ]]; then
+        cp -n "$PRISM_MODS_DIR/$biome_jar" "$STAGING/mods/" 2>/dev/null || true
+    else
+        echo "[run] WARN: $biome_jar not found in $PRISM_MODS_DIR — biomes referencing it will fail"
+    fi
+done
 ls "$STAGING/mods/"
 
 echo

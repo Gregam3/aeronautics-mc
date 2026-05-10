@@ -57,22 +57,45 @@ OUT_PACK_META = DP / "pack.mcmeta"
 # 6 + value * vertical_scale.
 ZONES = [
     (1,  (  0, 12, 36), "cold_ocean",       ["minecraft:cold_ocean", "minecraft:deep_cold_ocean"], 30),
-    (2,  (  1, 74,  1), "deep_forest",      ["minecraft:old_growth_spruce_taiga", "minecraft:old_growth_pine_taiga"], 80),
+    (2,  (  1, 74,  1), "deep_forest",      [
+        "minecraft:old_growth_spruce_taiga", "minecraft:old_growth_pine_taiga",
+        "regions_unexplored:redwoods", "regions_unexplored:blackwood_taiga",
+    ], 80),
     (3,  (  0,  3,179), "deep_ocean",       ["minecraft:deep_ocean", "minecraft:deep_lukewarm_ocean"], 25),
-    (4,  ( 68, 68, 68), "high_mountains",   ["minecraft:jagged_peaks", "minecraft:frozen_peaks"], 180),
+    (4,  ( 68, 68, 68), "high_mountains",   [
+        "minecraft:jagged_peaks", "minecraft:frozen_peaks",
+        "regions_unexplored:mountains", "regions_unexplored:towering_cliffs",
+        "regions_unexplored:spires",
+    ], 180),
     # Nether target Y bumped to 120 — its natural density profile runs Y=0-128
     # (lava floor → caverns → roof). At target Y=65 the heightmap clamp
     # truncated everything except the lava floor and the surface looked like
     # overworld with hollows. At 120 the full Nether terrain shape renders.
     (5,  (236,  1,  1), "nether",           ["minecraft:nether_wastes", "minecraft:crimson_forest", "minecraft:warped_forest", "minecraft:soul_sand_valley", "minecraft:basalt_deltas"], 120),
-    (6,  (  1,111,  1), "cold_forest",      ["minecraft:taiga", "minecraft:snowy_taiga", "minecraft:grove"], 75),
-    (7,  (136,136,136), "stony_mining",     ["minecraft:stony_peaks", "minecraft:windswept_hills", "minecraft:windswept_gravelly_hills"], 110),
-    (8,  (226,247,  0), "desert",           ["minecraft:desert"], 70),
+    (6,  (  1,111,  1), "cold_forest",      [
+        "minecraft:taiga", "minecraft:snowy_taiga", "minecraft:grove",
+        "regions_unexplored:cold_deciduous_forest", "regions_unexplored:cold_boreal_taiga",
+        "regions_unexplored:silver_birch_forest",
+    ], 75),
+    (7,  (136,136,136), "stony_mining",     [
+        "minecraft:stony_peaks", "minecraft:windswept_hills", "minecraft:windswept_gravelly_hills",
+        "regions_unexplored:arid_mountains", "regions_unexplored:chalk_cliffs",
+        "regions_unexplored:rocky_meadow",
+    ], 110),
+    (8,  (226,247,  0), "desert",           [
+        "minecraft:desert",
+        "regions_unexplored:saguaro_desert", "regions_unexplored:joshua_desert",
+        "regions_unexplored:outback",
+    ], 70),
     (9,  (236,169,  1), "badlands",         ["minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"], 90),
     (10, (223,  8,238), "end",              ["minecraft:end_highlands", "minecraft:end_midlands", "minecraft:end_barrens", "minecraft:small_end_islands"], 70),
     (11, (  0,170,179), "warm_ocean",       ["minecraft:warm_ocean", "minecraft:lukewarm_ocean"], 32),
     (12, (255,  2, 90), "sky_placeholder",  ["minecraft:cold_ocean"], 30),  # deferred to v2 with separate mask
-    (13, ( 15,179,  0), "spawn_plains",     ["minecraft:plains", "minecraft:sunflower_plains", "minecraft:meadow"], 70),
+    (13, ( 15,179,  0), "spawn_plains",     [
+        "minecraft:plains", "minecraft:sunflower_plains", "minecraft:meadow",
+        "regions_unexplored:clover_plains", "regions_unexplored:flower_fields",
+        "regions_unexplored:prairie",
+    ], 70),
 ]
 
 # RNG seed for the shade-variant noise — keep stable so re-runs produce the
@@ -188,6 +211,15 @@ def write_map_info(color_table: list[tuple[tuple[int,int,int], str, int]]) -> di
         {"biome": biome, "color": "#{:02X}{:02X}{:02X}".format(*rgb)}
         for rgb, biome, _zid in color_table
     ]
+    # Above sea level (Y > 64), painted Nether and End columns return
+    # `minecraft:plains` instead of their painted biome — gives overworld
+    # sky/fog atmosphere above the closed roof. The shifted nether density
+    # already produces no terrain above Y=63, so what's there is open air
+    # under a normal-looking sky.
+    overhead_colors = [
+        "#{:02X}{:02X}{:02X}".format(*rgb)
+        for rgb, _biome, zid in color_table if zid in (5, 10)
+    ]
     # No `scaling` block: NovoAtlas 1.1.0 (the only version available for
     # 1.21.1 NeoForge) does not understand horizontal_scale — it was added
     # in 1.2.0. Default scale of 1.0 (1 image px = 1 biome cell = 4 blocks)
@@ -208,6 +240,11 @@ def write_map_info(color_table: list[tuple[tuple[int,int,int], str, int]]) -> di
             "map": "caero_karos:karos",
             "strict": True,
             "biomes": biomes_list,
+            "overhead": {
+                "above_y": 64,
+                "biome": "minecraft:plains",
+                "colors": overhead_colors,
+            },
         },
     }
 
@@ -253,13 +290,43 @@ def write_regional_density(color_table: list[tuple[tuple[int,int,int], str, int]
     }
 
 
-# Vanilla `minecraft:nether` final_density inlined verbatim from the 1.21.1
-# server jar (data/minecraft/worldgen/noise_settings/nether.json#noise_router/
-# final_density). Re-published under our namespace as a standalone density
-# function so the regional select can reference it. Inner reference to
-# `minecraft:nether/base_3d_noise` IS a registered standalone vanilla function
-# and resolves cleanly.
-NETHER_FINAL_DENSITY = {
+# Vanilla `minecraft:nether` final_density inlined from the 1.21.1 server
+# jar (data/minecraft/worldgen/noise_settings/nether.json#noise_router/
+# final_density). Inner reference to `minecraft:nether/base_3d_noise` IS a
+# registered standalone vanilla function and resolves cleanly.
+#
+# Karos shift: all `from_y`/`to_y` values are reduced by NETHER_Y_SHIFT (65)
+# so the Nether's roof solidification band — vanilla Y=104..128 — lands at
+# Y=39..63 (overworld sea level). Lava-floor band shifts from Y=-8..24 to
+# Y=-73..-41, well below sea level. Result: the Nether ceiling sits exactly
+# at the overworld sea-level horizon instead of poking into the Tectonic
+# sky, and the Nether interior occupies the underground portion of the
+# painted region.
+# Karos nether — VANILLA nether density, Y-shifted, with a porosity bias
+# that opens the closed roof so the overworld sea pours in.
+#
+# Key insight (Greg, 2026-05-10): "I want default never rendering just at a
+# lower level. I don't want you to try and, like, recreate it". So we use
+# vanilla minecraft:nether/final_density wholesale — just shifted in Y.
+#
+# Mapping (NETHER_Y_SHIFT = 63):
+#   Vanilla Y=128 (closed roof top)    → our Y=65   "peak", sea level entry
+#   Vanilla Y=104 (roof bottom)        → our Y=41   transition to closed
+#   Vanilla Y=64  (player walks here)  → our Y=1    iconic Nether mid-cavern
+#   Vanilla Y=32  (lava sea)           → our Y=-31  lava sea level
+#   Vanilla Y=0   (bedrock floor)      → our Y=-63  deep floor
+# Player drops in at Y=65 → falls through ~25 blocks of porous-roof zone
+# → enters the open cavern around Y=40 → iconic walking level at Y=1
+# → lava sea at Y=-31. ~100 blocks of vertical exploration before bedrock.
+#
+# Porosity: above Y=35 we ADD a downward Y-bias that gradually pulls density
+# toward air. By Y=60 the natural roof is mostly air; at Y=65 it's pure air.
+# The transition zone Y=35-50 has natural noise variation, producing
+# scattered solid pillars/columns that look like roof remnants — sea above
+# can spill through the gaps.
+NETHER_Y_SHIFT = 63
+
+_VANILLA_NETHER_FINAL_SHIFTED = {
     "type": "minecraft:squeeze",
     "argument": {
         "type": "minecraft:mul", "argument1": 0.64,
@@ -273,8 +340,8 @@ NETHER_FINAL_DENSITY = {
                         "type": "minecraft:mul",
                         "argument1": {
                             "type": "minecraft:y_clamped_gradient",
-                            "from_value": 0.0, "from_y": -8,
-                            "to_value": 1.0, "to_y": 24,
+                            "from_value": 0.0, "from_y": -8 - NETHER_Y_SHIFT,
+                            "to_value": 1.0, "to_y": 24 - NETHER_Y_SHIFT,
                         },
                         "argument2": {
                             "type": "minecraft:add", "argument1": -2.5,
@@ -284,8 +351,8 @@ NETHER_FINAL_DENSITY = {
                                     "type": "minecraft:mul",
                                     "argument1": {
                                         "type": "minecraft:y_clamped_gradient",
-                                        "from_value": 1.0, "from_y": 104,
-                                        "to_value": 0.0, "to_y": 128,
+                                        "from_value": 1.0, "from_y": 104 - NETHER_Y_SHIFT,
+                                        "to_value": 0.0, "to_y": 128 - NETHER_Y_SHIFT,
                                     },
                                     "argument2": {
                                         "type": "minecraft:add", "argument1": -0.9375,
@@ -300,45 +367,80 @@ NETHER_FINAL_DENSITY = {
         },
     },
 }
+NETHER_FINAL_DENSITY = {
+    # ADD a downward Y-bias to vanilla shifted density — opens the closed
+    # roof. Below Y=35 the bias is 0 (vanilla unaffected, full Nether feel).
+    # Y=35-65 ramps to -2.8, gradually overriding vanilla's solid roof with
+    # air (porous transition). Y > 65 clamps at -2.8 = forced air.
+    "type": "minecraft:add",
+    "argument1": _VANILLA_NETHER_FINAL_SHIFTED,
+    "argument2": {
+        "type": "minecraft:y_clamped_gradient",
+        "from_value":  0.0, "from_y": 35,
+        "to_value":   -2.8, "to_y":   65,
+    },
+}
 
-# Vanilla `minecraft:end` final_density inlined.
+# Karos End — purpose-built density, NOT vanilla end_final.
+#
+# Design: giant floating end_stone islands suspended ABOVE a deep water
+# column, with a solid seafloor at the bottom. Roughly:
+#
+#   Y > 95          : pure air (overworld sky)
+#   Y = 65-85       : floating end_stone islands (sloped_cheese-driven)
+#   Y = 65          : sea level (overworld water surface)
+#   Y = -10 to 65   : deep water column (overworld aquifer fills with water,
+#                     and the karos remap NO LONGER converts water→air in
+#                     End biomes, so the ocean actually appears)
+#   Y = -30 to -10  : transition / shoreline mass
+#   Y < -30         : solid floor (seafloor stone)
+#
+# Implemented by adding sloped_cheese (raw island noise from vanilla End)
+# and a composed Y-bias function: seafloor solid mass + deep-water negative
+# bias + island-zone positive bump + top air cap. The four Y-gradients sum
+# linearly to give the bands above.
 END_FINAL_DENSITY = {
-    "type": "minecraft:squeeze",
-    "argument": {
-        "type": "minecraft:mul", "argument1": 0.64,
+    "type": "minecraft:add",
+    # Island shape noise — amplified so peaks form sizeable end_stone chunks
+    # (the "giant" floating end Greg wanted).
+    "argument1": {
+        "type": "minecraft:mul",
+        "argument1": 2.5,
+        "argument2": "minecraft:end/sloped_cheese",
+    },
+    # Composite Y-bias: seafloor + deep_water_bias + island_bump + top_cap.
+    "argument2": {
+        "type": "minecraft:add",
+        "argument1": {
+            "type": "minecraft:add",
+            # seafloor: +5 below Y=-30, 0 above Y=-10
+            "argument1": {
+                "type": "minecraft:y_clamped_gradient",
+                "from_value":  5.0, "from_y": -30,
+                "to_value":    0.0, "to_y":   -10,
+            },
+            # deep_water_bias: 0 at Y=-10, -3 at Y=10 onwards (kills land in
+            # the water column).
+            "argument2": {
+                "type": "minecraft:y_clamped_gradient",
+                "from_value":  0.0, "from_y": -10,
+                "to_value":   -3.0, "to_y":   10,
+            },
+        },
         "argument2": {
-            "type": "minecraft:interpolated",
-            "argument": {
-                "type": "minecraft:blend_density",
-                "argument": {
-                    "type": "minecraft:add", "argument1": -0.234375,
-                    "argument2": {
-                        "type": "minecraft:mul",
-                        "argument1": {
-                            "type": "minecraft:y_clamped_gradient",
-                            "from_value": 0.0, "from_y": 4,
-                            "to_value": 1.0, "to_y": 32,
-                        },
-                        "argument2": {
-                            "type": "minecraft:add", "argument1": 0.234375,
-                            "argument2": {
-                                "type": "minecraft:add", "argument1": -23.4375,
-                                "argument2": {
-                                    "type": "minecraft:mul",
-                                    "argument1": {
-                                        "type": "minecraft:y_clamped_gradient",
-                                        "from_value": 1.0, "from_y": 56,
-                                        "to_value": 0.0, "to_y": 312,
-                                    },
-                                    "argument2": {
-                                        "type": "minecraft:add", "argument1": 23.4375,
-                                        "argument2": "minecraft:end/sloped_cheese",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
+            "type": "minecraft:add",
+            # island_bump: +3 around Y=60-80 — cancels the deep_water_bias and
+            # gives a solid-leaning bias so sloped_cheese peaks become islands.
+            "argument1": {
+                "type": "minecraft:y_clamped_gradient",
+                "from_value":  0.0, "from_y": 50,
+                "to_value":    3.0, "to_y":   70,
+            },
+            # top_cap: -10 above Y=95 — absolutely no islands above this.
+            "argument2": {
+                "type": "minecraft:y_clamped_gradient",
+                "from_value":  0.0,  "from_y": 80,
+                "to_value":  -10.0,  "to_y":   95,
             },
         },
     },

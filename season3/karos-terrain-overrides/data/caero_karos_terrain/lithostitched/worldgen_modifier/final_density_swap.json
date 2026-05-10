@@ -1,0 +1,34 @@
+{
+  "type": "lithostitched:wrap_noise_router",
+  "priority": 10000,
+  "dimension": "minecraft:overworld",
+  "target": "final_density",
+  "wrapper_function": {
+    "type": "novoatlas:select_by_biome_color",
+    "map_info": "caero_karos:karos",
+    "fallback": {
+      "type": "lithostitched:wrapped_marker"
+    },
+    "selections": [
+      {
+        "colors": [
+          "#EC0101",
+          "#ED0202",
+          "#EE0303",
+          "#EF0404",
+          "#F00505"
+        ],
+        "function": "caero_karos:nether_final"
+      },
+      {
+        "colors": [
+          "#DF08EE",
+          "#E009EF",
+          "#E10AF0",
+          "#E20BF1"
+        ],
+        "function": "caero_karos:end_final"
+      }
+    ]
+  }
+}

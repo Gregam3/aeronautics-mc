@@ -187,3 +187,118 @@ runtime-affecting change. Format: `- [date] mod — what changed → what to ver
   stony belt. Fly east → cold-forest belt. To revert: delete
   paxi/datapacks/karos-datapack (datapack off) and/or
   mods/novoatlas-neoforge-1.1.0+1.21.1.jar (mod off).
+- 2026-05-10 caero_atlas (Karos worldgen v2) — fork no longer overrides
+  the noise router, so vanilla overworld terrain (with Tectonic +
+  Lithostitched + Regions Unexplored stack) drives terrain shape. New
+  Lithostitched modifier `karos-terrain-overrides/.../final_density_swap.json`
+  wraps the registry's overworld final_density with `select_by_biome_color`
+  → in painted Nether/End color zones the inlined Nether/End final density
+  takes over; everywhere else the wrapped (Tectonic-shaped) overworld density
+  flows through. Per-biome block palette swap (netherrack / end_stone / lava)
+  still applies in doFill. **Make a new world** to test (dimension config
+  is frozen at world creation). Verify: spawn should now have rolling
+  Tectonic-shaped terrain (mountains, ridges, etc.) instead of flat
+  heightmap-driven landscape. Nether and End zones still render correctly
+  with their respective terrain shape and block palette. Same /tp commands
+  as before to test the zones.
+- 2026-05-10 caero_atlas (Karos worldgen v2.1) — shifted the inlined Nether
+  final_density Y values down by 65 (NETHER_Y_SHIFT in
+  generate-karos-datapack.py). Result: Nether's solid roof band, vanilla
+  Y=104..128, now sits at Y=39..63 (overworld sea level). Walk into a
+  painted Nether zone — netherrack ceiling should be at sea-level horizon,
+  overworld sky visible above. Lava-floor band lives at Y=-73..-41 (deep
+  underground). **New world required** (frozen at creation). Test by
+  teleporting to /tp @s -842 100 1555 — land on the netherrack roof at
+  ~Y=63, mine down to find the cavern + lava.
+- 2026-05-10 caero_atlas v2.2 — fork: ColorMapBiomeProvider now supports
+  optional `overhead` config (above_y / biome / colors). Above the Y
+  threshold, columns whose painted color is in the color set return the
+  overhead biome instead of the painted one. Wired up so Y > 64 in painted
+  Nether/End columns returns minecraft:plains — overworld sky/fog
+  atmosphere above the closed roof, no more "Nether goes into the skybox".
+  Lithostitched wrap priority bumped to 10000 so our nether_final density
+  wraps OUTSIDE Tectonic's modifications (otherwise Tectonic's amp scales
+  it to mountain heights). Adds 17 RU biomes across deep_forest,
+  high_mountains, cold_forest, stony_mining, desert, spawn_plains zones.
+  **New world required.** Test: stand near a Nether/End zone edge, look up
+  — sky should be normal blue, not Nether-red. Look down — Nether terrain
+  fully visible below sea level with closed netherrack roof at Y=63ish.
+- 2026-05-10 Tectonic config tuning — toned down for more "alive" feel:
+  * biomes.temperature_scale 0.25→0.5 (smaller temperature regions =
+    more variety per area; old setting made biomes feel monotonous)
+  * biomes.vegetation_scale 0.25→0.5 (same — smaller humidity regions)
+  * continents.continents_scale 0.13→0.25 (smaller continents, less
+    giant empty ocean expanses between them)
+  * continents.ocean_offset -0.65→-0.45 (less ocean dominance; per
+    Tectonic tooltip "Lower values = more oceans" so going up = less)
+  * continents.flat_terrain_skew 0.1→0.0 (don't over-favor flat plateaus)
+  * global_terrain.vertical_scale 1.125→1.05 (mild pullback on peak
+    exaggeration)
+  Backup at config/tectonic.json.bak-2026-05-10. Restart MC + create a
+  new world to test (vertical_scale + ultrasmooth need restart per
+  Tectonic tooltips). If still "empty" we can push biome scales higher
+  (0.75) and/or ocean_offset further (-0.3).
+- 2026-05-10 caero_atlas v2.3 — nether density now wrapped in min(..)
+  with a y_clamped_gradient that forces strongly-negative density above
+  Y=64. Root cause of the Y=350 stone pillars: vanilla
+  minecraft:nether/final_density formula returns ~+0.6 (solid) at
+  arbitrary Y above the roof gradient end; vanilla nether dimension
+  hides this by setting max_y=128. Our overworld max_y=320 means the
+  formula generated solid blocks all the way up. The min() cap forces
+  density to -64 at Y>=65, guaranteed air. **New world required.**
+  Test: stand in Nether zone, look up — should see open sky from Y=65
+  upward, not stone walls. Nether interior visible below: closed
+  netherrack roof at Y~63, then porous cavern with lava sea at Y~-30.
+  If overworld water reaches a gap in the roof, it should flow into
+  the cavern.
+- 2026-05-10 caero_atlas v2.4 — replaced inlined-vanilla nether density
+  with a much simpler formula: y_clamped_gradient (solid below Y=-15,
+  air above Y=30) added to vanilla nether_3d_noise scaled to ±0.6.
+  Result band:
+    Y < -15: fully solid netherrack mass (deep underground)
+    Y = -15 to 30: porous cavern (50/50 solid/air modulated by nether
+        noise — the "the cavern feel" Greg asked for)
+    Y >= 30: pure air, nothing renders
+  At sea level (Y=65) overworld water flows down through any natural
+  gap in the cavern's upper surface (Y~25-30). Lava lakes in the cavern
+  via overworld aquifer + biome water→lava remap. **New world.** Test:
+  /tp @s -842 100 1555 then look down — should see open air above ~Y=30,
+  porous netherrack-and-lava cavern below, solid mass deeper. Should
+  match the "porous, open like the real Nether" target more than the
+  vanilla-formula-shifted v2.3 did.
+- 2026-05-10 caero_atlas v2.5 — End redesigned. New end_final density:
+  * Y < -30: solid floor (seafloor stone)
+  * Y = -30 to -10: shoreline transition
+  * Y = -10 to 50: deep water column (aquifer fills with water; remap
+    no longer wipes water in End biomes)
+  * Y = 50 to 85: floating end_stone island band, sloped_cheese-driven
+  * Y > 95: pure air (overworld sky)
+  Sea level Y=65 lands inside the island zone, so islands stick out above
+  the waterline. Fork updated to PRESERVE water in End biomes (was
+  remapping water→air). **New world.** Test: /tp @s -1038 150 -2253 →
+  should fall through air, see giant end_stone islands floating between
+  ~Y=65-85 above a wide deep-water ocean, seafloor far below.
+- 2026-05-10 caero_atlas v3.0 — Nether redesigned for "default rendering at lower level".
+  Approach: VANILLA minecraft:nether/final_density inlined verbatim, then
+  Y-shifted by 63 (vanilla Y=128 → our Y=65 = sea level peak), then
+  augmented with a porosity Y-bias (0 below Y=35, ramps to -2.8 by Y=65)
+  that opens the closed roof so sea spills in. Block remap split:
+    Y < 0 (lower nether): water → lava (forms lava sea on netherrack floor)
+    Y >= 0 (upper cavern): water → air (keeps walking level dry)
+  Headless iteration analysis (4 rounds via iter_nether.py) confirms:
+    Y=64+: 100% air (overworld sky, plains biome via overhead config)
+    Y=36-62: 100% air (open cavern below porous roof)
+    Y=28-36: porous netherrack with magma_block features (transition)
+    Y=14-28: cavern walls, blackstone, gravel, basalt
+    Y=0-12: 80-100% air (iconic mid-cavern walking level)
+    Y=-6 down: solid netherrack mass with quartz/gold ore, tuff, fire
+  Biomes at Y=0: nether_wastes (61%) + crimson_forest (39%). Features
+  generating naturally: gravel, blackstone, magma_block, fire, ores —
+  default vanilla nether decoration is firing.
+  Known polish: lava sea is sparse (1 block at Y=-50). Aquifer doesn't
+  fill the deep cavern much; the iconic "continuous lava floor" doesn't
+  form. Acceptable for now.
+  **New world.** Test: /tp @s -842 80 1555 → fall through Y=80 air → hit
+  porous transition Y=30-65 (sea may be spilling in if zone borders an
+  ocean) → land in open cavern around Y=10 → mid-walking level Y=0-8 →
+  iconic nether feel.
