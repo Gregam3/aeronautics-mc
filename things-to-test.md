@@ -366,3 +366,48 @@ runtime-affecting change. Format: `- [date] mod — what changed → what to ver
   If still not dramatic enough at the gray mountain zones specifically,
   next step is fork-level: select_by_biome_color with a positive density
   bias in mountain colors (=> per-painted-zone terrain shape).
+- 2026-05-10 caero_nether_atmosphere (NEW client-only mod) — mixin on
+  LevelRenderer.renderClouds cancels at HEAD when local player is in a biome
+  tagged minecraft:is_nether. Restart MC, walk into a painted Nether biome
+  (nether_wastes / crimson_forest / warped_forest / soul_sand_valley /
+  basalt_deltas) → clouds should disappear; walk back into an Overworld
+  biome → clouds reappear. Sun is NOT touched in this pass — say so if
+  you want it hidden too. Sodium is installed; if clouds still show in
+  Nether biomes the inject probably lost a priority fight with sodium and
+  we'll need an additional sodium-targeted mixin.
+- 2026-05-10 karos mask — restored. Moved
+  `mods/disabled-karos-painted-mask/novoatlas-karos-*.jar` to `mods/`
+  root (NeoForge ignores subfolders; that's why density-function types
+  weren't registering and the world crashed last session). Renamed
+  `config/paxi/_disabled-datapacks/.disabled-karos-datapack` → active
+  `config/paxi/datapacks/karos-datapack`. Left
+  `.disabled-karos-terrain-overrides` parked. → enter a fresh world
+  (or your existing save 13); /tp to:
+    nether:    /tp -188 80 2224  /tp -288 80 2160
+    end:       /tp -204 80 -2156  /tp -128 80 -2172
+    mountains: /tp -1992 120 76  /tp -1896 120 52
+  Verify nether biomes show netherrack surface, end biomes show
+  end_stone, mountains show jagged/frozen peaks. Surface Y will differ
+  from these coords because terrain seed is per-world; come in flying.
+- 2026-05-10 worldgen — Tectonic disabled in PrismLauncher mods/
+  (`tectonic-3.0.22-neoforge-21.1.jar.disabled`); also dropped from staging
+  by run-audit's existing `*\.disabled` filter → start a brand-new
+  singleplayer world; player spawn Y should be 60–160 (was Y=200+ with
+  Tectonic). If it's still in the sky on a fresh seed, the residual
+  cause is caero_rings voronoi mislabeling mountain-shape as plains, not
+  Tectonic — flag for follow-up.
+- 2026-05-10 karos-mapgen audit — `bash season3/test/karos-mapgen/run-audit.sh`
+  now passes 9/0/4 (was failing on a 272-chunk forceload limit, plus
+  several thresholds calibrated to a Tectonic-on world). Patches now span
+  all three ring tiers (9 × 4×4 patches over caero_rings seeds);
+  `spawn_height` reads level.dat instead of avg-Y near origin → just
+  re-run the audit; no in-game test needed beyond confirming a fresh
+  world spawns sanely as above.
+- 2026-05-10 paxi — moved `.disabled-karos-datapack` and
+  `.disabled-karos-terrain-overrides` out of `config/paxi/datapacks/` into
+  sibling `config/paxi/_disabled-datapacks/`; emptied `loadOrder` in
+  `datapack_load_order.json` (orphan `zzz_caero_rings_wrap.zip` ref) →
+  enter the singleplayer world; should no longer crash with
+  "Failed to load registries" / "Unknown registry key
+  novoatlas:select_by_biome_color", and `[paxi/ERROR]` line about the
+  missing wrap zip should be gone from `latest.log`.

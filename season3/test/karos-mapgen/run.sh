@@ -36,6 +36,11 @@ BIOME_MODS=(
     "architectury-13.0.8-neoforge.jar"
     # Tectonic too — terrain shape comes from its Lithostitched wrappers
     "tectonic-3.0.22-neoforge-21.1.jar"
+    # caero_rings: tier-ring biome filter (S2 mod, re-enabled for S3v2)
+    "caero_rings.jar"
+    # caero_rings depends on:
+    "kotlinforforge-5.11.0-all.jar"
+    "geckolib-neoforge-1.21.1-4.8.3.jar"
 )
 
 DATAPACK_BIOME="$REPO_ROOT/season3/karos-datapack"
