@@ -1,0 +1,26 @@
+{
+  "type": "lithostitched:add_surface_rule",
+  "priority": 100,
+  "levels": [
+    "minecraft:overworld"
+  ],
+  "injection_type": "prepend",
+  "surface_rule": {
+    "type": "minecraft:condition",
+    "if_true": {
+      "type": "minecraft:biome",
+      "biome_is": [
+        "minecraft:end_highlands",
+        "minecraft:end_midlands",
+        "minecraft:end_barrens",
+        "minecraft:small_end_islands"
+      ]
+    },
+    "then_run": {
+      "type": "minecraft:block",
+      "result_state": {
+        "Name": "minecraft:end_stone"
+      }
+    }
+  }
+}

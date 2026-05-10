@@ -1,0 +1,142 @@
+{
+  "starting_y": 6,
+  "height_map": "caero_karos:karos",
+  "surface_biomes": {
+    "map": "caero_karos:karos",
+    "strict": true,
+    "biomes": [
+      {
+        "biome": "minecraft:cold_ocean",
+        "color": "#000C24"
+      },
+      {
+        "biome": "minecraft:deep_cold_ocean",
+        "color": "#010D25"
+      },
+      {
+        "biome": "minecraft:old_growth_spruce_taiga",
+        "color": "#014A01"
+      },
+      {
+        "biome": "minecraft:old_growth_pine_taiga",
+        "color": "#024B02"
+      },
+      {
+        "biome": "minecraft:deep_ocean",
+        "color": "#0003B3"
+      },
+      {
+        "biome": "minecraft:deep_lukewarm_ocean",
+        "color": "#0104B4"
+      },
+      {
+        "biome": "minecraft:jagged_peaks",
+        "color": "#444444"
+      },
+      {
+        "biome": "minecraft:frozen_peaks",
+        "color": "#454545"
+      },
+      {
+        "biome": "minecraft:nether_wastes",
+        "color": "#EC0101"
+      },
+      {
+        "biome": "minecraft:crimson_forest",
+        "color": "#ED0202"
+      },
+      {
+        "biome": "minecraft:warped_forest",
+        "color": "#EE0303"
+      },
+      {
+        "biome": "minecraft:soul_sand_valley",
+        "color": "#EF0404"
+      },
+      {
+        "biome": "minecraft:basalt_deltas",
+        "color": "#F00505"
+      },
+      {
+        "biome": "minecraft:taiga",
+        "color": "#016F01"
+      },
+      {
+        "biome": "minecraft:snowy_taiga",
+        "color": "#027002"
+      },
+      {
+        "biome": "minecraft:grove",
+        "color": "#037103"
+      },
+      {
+        "biome": "minecraft:stony_peaks",
+        "color": "#888888"
+      },
+      {
+        "biome": "minecraft:windswept_hills",
+        "color": "#898989"
+      },
+      {
+        "biome": "minecraft:windswept_gravelly_hills",
+        "color": "#8A8A8A"
+      },
+      {
+        "biome": "minecraft:desert",
+        "color": "#E2F700"
+      },
+      {
+        "biome": "minecraft:badlands",
+        "color": "#ECA901"
+      },
+      {
+        "biome": "minecraft:eroded_badlands",
+        "color": "#EDAA02"
+      },
+      {
+        "biome": "minecraft:wooded_badlands",
+        "color": "#EEAB03"
+      },
+      {
+        "biome": "minecraft:end_highlands",
+        "color": "#DF08EE"
+      },
+      {
+        "biome": "minecraft:end_midlands",
+        "color": "#E009EF"
+      },
+      {
+        "biome": "minecraft:end_barrens",
+        "color": "#E10AF0"
+      },
+      {
+        "biome": "minecraft:small_end_islands",
+        "color": "#E20BF1"
+      },
+      {
+        "biome": "minecraft:warm_ocean",
+        "color": "#00AAB3"
+      },
+      {
+        "biome": "minecraft:lukewarm_ocean",
+        "color": "#01ABB4"
+      },
+      {
+        "biome": "minecraft:cold_ocean",
+        "color": "#FF025A"
+      },
+      {
+        "biome": "minecraft:plains",
+        "color": "#0FB300"
+      },
+      {
+        "biome": "minecraft:sunflower_plains",
+        "color": "#10B401"
+      },
+      {
+        "biome": "minecraft:meadow",
+        "color": "#11B502"
+      }
+    ]
+  }
+}

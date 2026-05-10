@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "novoatlas:image_map",
+    "map_info": "caero_karos:karos",
+    "settings": "minecraft:overworld",
+    "underground_density_function": "caero_karos:regional_underground",
+    "biome_source": {
+      "type": "novoatlas:color_map",
+      "map_info": "caero_karos:karos",
+      "default_biome": "minecraft:cold_ocean"
+    }
+  }
+}
