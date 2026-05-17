@@ -48,6 +48,10 @@ class VoronoiTieredBiomeSource(
     // sky islands at the edge" failure mode.
     private val hardSubstitution: HolderSet<Biome>,
     private val seeds: List<Seed>,
+    // Named themed biome pools. A seed with `theme: "mountain_high"` draws
+    // substitutes from `themes["mountain_high"]` instead of the tier default.
+    // Empty map means "no themed seeds" — pure tier behaviour.
+    private val themes: Map<String, HolderSet<Biome>>,
     private val mediumMinRadius: Int,
     private val hardMinRadius: Int,
     private val floorJitter: Int,
@@ -59,41 +63,71 @@ class VoronoiTieredBiomeSource(
 
     override fun codec(): MapCodec<out BiomeSource> = CODEC
 
-    override fun collectPossibleBiomes(): Stream<Holder<Biome>> =
-        Stream.of(delegate.possibleBiomes().stream(), easy.stream(), medium.stream(), hard.stream())
-            .flatMap { it }
-            .distinct()
+    override fun collectPossibleBiomes(): Stream<Holder<Biome>> {
+        val themeStream = themes.values.stream().flatMap { it.stream() }
+        return Stream.of(
+            delegate.possibleBiomes().stream(),
+            easy.stream(), medium.stream(), hard.stream(),
+            themeStream,
+        ).flatMap { it }.distinct()
+    }
 
     override fun getNoiseBiome(x: Int, y: Int, z: Int, sampler: Climate.Sampler): Holder<Biome> {
         if (diagPrinted.compareAndSet(false, true)) {
             LOGGER.info(
-                "caero_rings DIAG: medium_min={} hard_min={} floor_jitter={} seeds={} easy_size={} medium_size={} hard_size={} hard_sub_size={}",
+                "caero_rings DIAG: medium_min={} hard_min={} floor_jitter={} seeds={} easy_size={} medium_size={} hard_size={} hard_sub_size={} themes=[{}]",
                 mediumMinRadius, hardMinRadius, floorJitter, seeds.size,
-                easy.size(), medium.size(), hard.size(), hardSubstitution.size()
+                easy.size(), medium.size(), hard.size(), hardSubstitution.size(),
+                themes.entries.joinToString(", ") { (k, v) -> "$k=${v.size()}" }
             )
         }
 
         val natural = delegate.getNoiseBiome(x, y, z, sampler)
-        val naturalTier = tierOf(natural) ?: return natural  // oceans / unclassified pass through
-
         val worldX = QuartPos.toBlock(x)
         val worldZ = QuartPos.toBlock(z)
-        val wanted = resolveTier(worldX, worldZ)
+        val (wanted, themedSeed) = resolveTierAndSeed(worldX, worldZ)
 
+        // Themed cells ALWAYS substitute — even for oceans/rivers/beaches/
+        // caves that are otherwise untagged. Without this, ocean pockets
+        // inside the nether_core cell stay as overworld ocean, leaving
+        // patches of water with sand floor in the middle of what should
+        // be netherrack. Same hole produced "the nether is rendering as a
+        // forest" when the natural biome was a non-tier overworld biome.
+        if (themedSeed != null) {
+            return pickSubstitute(wanted, themedSeed, natural, worldX, worldZ, y, sampler)
+        }
+
+        // Non-themed cells: tier-based substitution as before. Untagged
+        // biomes (oceans, rivers) keep passing through — those are the
+        // global ocean/river network, not pockets inside a themed region.
+        val naturalTier = tierOf(natural) ?: return natural
         return if (naturalTier == wanted) natural
-        else pickSubstitute(wanted, natural, worldX, worldZ, y, sampler)
+        else pickSubstitute(wanted, null, natural, worldX, worldZ, y, sampler)
     }
 
     /**
-     * Compute the wanted tier at (worldX, worldZ): pick the nearest Voronoi seed,
-     * apply per-cell-jittered minimum-radius floors so the easy core has an
-     * irregular border instead of a perfect circle, then enforce the
-     * **no-Easy↔Hard-adjacency** rule: if the second-nearest seed differs by
-     * ≥2 tiers and we're within [CELL_BOUNDARY_BUFFER] blocks of the cell
-     * boundary, force MEDIUM. Public so tests and the offline renderer can
-     * drive the same logic.
+     * Compute the wanted tier at (worldX, worldZ). Convenience for callers that
+     * don't care which seed we belong to (tests, offline renderer).
      */
-    fun resolveTier(worldX: Int, worldZ: Int): Tier {
+    fun resolveTier(worldX: Int, worldZ: Int): Tier =
+        resolveTierAndSeed(worldX, worldZ).first
+
+    /**
+     * Compute (wanted tier, owning seed for theme lookup). The seed half of the
+     * pair is the nearest Voronoi seed iff its theme is allowed to apply at this
+     * location — null when:
+     *  - the radius floor downgraded the tier (we're inside a no-theme buffer
+     *    near origin and should fall back to vanilla biomes from that tier), OR
+     *  - the cell-boundary buffer kicked in (we're straddling an Easy↔Hard
+     *    boundary and the transition zone gets neutral MEDIUM with no theme).
+     *
+     * Picks the nearest Voronoi seed, applies per-cell-jittered minimum-radius
+     * floors so the easy core has an irregular border instead of a perfect
+     * circle, then enforces the **no-Easy↔Hard-adjacency** rule: if the
+     * second-nearest seed differs by ≥2 tiers and we're within
+     * [CELL_BOUNDARY_BUFFER] blocks of the cell boundary, force MEDIUM.
+     */
+    fun resolveTierAndSeed(worldX: Int, worldZ: Int): Pair<Tier, Seed?> {
         val twoNearest = nearestTwoSeedsOf(worldX, worldZ, seeds)
         val baseTier = applyRadiusFloor(twoNearest.first.tier, worldX, worldZ)
 
@@ -107,10 +141,16 @@ class VoronoiTieredBiomeSource(
                 // to read as a transition zone.
                 val gap = sqrt(twoNearest.secondDistSq.toDouble()) -
                           sqrt(twoNearest.firstDistSq.toDouble())
-                if (gap < CELL_BOUNDARY_BUFFER * 2) return Tier.MEDIUM
+                if (gap < CELL_BOUNDARY_BUFFER * 2) return Pair(Tier.MEDIUM, null)
             }
         }
-        return baseTier
+        // Theme only applies when the floor didn't downgrade us. A HARD-themed
+        // seed near origin stays unthemed (vanilla easy biomes) until we cross
+        // its hard_min_radius — so the spawn-safety contract is preserved.
+        val themeSeed = if (baseTier == twoNearest.first.tier && twoNearest.first.theme != null) {
+            twoNearest.first
+        } else null
+        return Pair(baseTier, themeSeed)
     }
 
     /**
@@ -189,30 +229,47 @@ class VoronoiTieredBiomeSource(
      */
     private fun pickSubstitute(
         wanted: Tier,
+        themedSeed: Seed?,
         natural: Holder<Biome>,
         worldX: Int,
         worldZ: Int,
         yQuart: Int,
         sampler: Climate.Sampler,
     ): Holder<Biome> {
-        val candidates = when (wanted) {
+        val themePool = themedSeed?.theme?.let { themes[it] }
+        val candidates: HolderSet<Biome> = themePool ?: when (wanted) {
             Tier.EASY -> easy
             Tier.MEDIUM -> medium
             Tier.HARD -> hardSubstitution  // workhorse hard biomes only; rares excluded
         }
         if (candidates.size() == 0) {
+            val src = if (themePool != null) "theme '${themedSeed?.theme}'" else "tier $wanted"
             LOGGER.warn(
-                "caero_rings SILENT PASSTHROUGH at ({}, {}): wanted={} tag empty → returning natural '{}'",
-                worldX, worldZ, wanted,
+                "caero_rings SILENT PASSTHROUGH at ({}, {}): {} tag empty → returning natural '{}'",
+                worldX, worldZ, src,
                 natural.unwrapKey().map { it.location().toString() }.orElse("?")
             )
             return natural
         }
 
-        // ── Worley cell membership ───────────────────────────────────────────
+        // ── Worley cell membership, with domain-warped sampling position ────
+        // Perturb (worldX, worldZ) by two independent value-noise samples
+        // before locating the nearest Worley center. Pure Worley produces
+        // straight perpendicular-bisector boundaries between adjacent cells;
+        // domain warping bends those bisectors into organic squiggles, so
+        // biome edges read as natural coastlines / forest fringes instead
+        // of polygon facets. The grid coordinates `bestCx`/`bestCz` (used
+        // downstream for the pool-index hash) are derived from the warped
+        // position too, so cells stay internally stable — only the
+        // *boundary shape* moves.
+        val warpX = (valueNoise2D(worldX, worldZ, WARP_NOISE_SCALE) * WARP_AMPLITUDE).toInt()
+        val warpZ = (valueNoise2D(worldX + WARP_OFFSET, worldZ - WARP_OFFSET, WARP_NOISE_SCALE) * WARP_AMPLITUDE).toInt()
+        val sampleX = worldX + warpX
+        val sampleZ = worldZ + warpZ
+
         val cell = BIOME_PATCH_SCALE
-        val gx = Math.floorDiv(worldX, cell)
-        val gz = Math.floorDiv(worldZ, cell)
+        val gx = Math.floorDiv(sampleX, cell)
+        val gz = Math.floorDiv(sampleZ, cell)
         var bestDistSq = Long.MAX_VALUE
         var bestCx = gx
         var bestCz = gz
@@ -228,8 +285,8 @@ class VoronoiTieredBiomeSource(
                 val jz = (((h ushr 16) and 0xFFFF) * cell) ushr 16
                 val px = cx * cell + jx
                 val pz = cz * cell + jz
-                val ddx = (worldX - px).toLong()
-                val ddz = (worldZ - pz).toLong()
+                val ddx = (sampleX - px).toLong()
+                val ddz = (sampleZ - pz).toLong()
                 val d = ddx * ddx + ddz * ddz
                 if (d < bestDistSq) {
                     bestDistSq = d
@@ -239,6 +296,38 @@ class VoronoiTieredBiomeSource(
                     bestPz = pz
                 }
             }
+        }
+
+        // Themed cells: previously did a pure hash-pick across the full
+        // theme pool with no temperature consultation. That produced visibly
+        // jarring adjacencies inside climate-diverse themes (e.g.
+        // mountain_high alternating jagged_peaks↔arid_mountains every
+        // ~512 blocks; cursed_wastes putting ashen_woodland next to
+        // saguaro_desert). Now we ALSO filter the theme pool by the
+        // cell-center natural's baseTemperature within TEMP_BAND, so
+        // patches inside a themed cell cluster into climate-coherent
+        // regions. When the band is empty (theme pools like nether_core
+        // or end_islands where every member shares a baseTemperature far
+        // from any overworld natural), fall back to the prior pure-hash
+        // pick across the full pool — preserves the existing diversity
+        // for uniform-temperature themes.
+        if (themePool != null) {
+            val cellNatural = delegate.getNoiseBiome(
+                QuartPos.fromBlock(bestPx), yQuart, QuartPos.fromBlock(bestPz), sampler,
+            )
+            val target = cellNatural.value().baseTemperature
+            val themedPool = ArrayList<Holder<Biome>>()
+            for (candidate in candidates) {
+                if (abs(candidate.value().baseTemperature - target) <= TEMP_BAND) {
+                    themedPool.add(candidate)
+                }
+            }
+            val h = patchHash(bestCx, bestCz)
+            if (themedPool.isNotEmpty()) {
+                return themedPool[(h and Int.MAX_VALUE) % themedPool.size]
+            }
+            val candidateList = candidates.stream().toList()
+            return candidateList[(h and Int.MAX_VALUE) % candidateList.size]
         }
 
         // ── Stable pool sampled at the cell's chosen center ─────────────────
@@ -263,7 +352,13 @@ class VoronoiTieredBiomeSource(
             val idx = (h and Int.MAX_VALUE) % pool.size
             return pool[idx]
         }
-        if (closestDiff > MAX_TEMP_DRIFT) return natural
+        // No climate match within TEMP_BAND. Always pick closest from the pool
+        // anyway — never pass `natural` through. The old `if closestDiff >
+        // MAX_TEMP_DRIFT return natural` escape hatch let cold HARD biomes
+        // (frozen_peaks etc.) leak into the easy core when the easy pool
+        // had no cold candidates; with Tectonic disabled this hit spawn directly.
+        // Accept the occasional climate mismatch — better than themed-biome
+        // leakage breaking the spawn-safety contract.
         return closest ?: natural
     }
 
@@ -342,8 +437,47 @@ class VoronoiTieredBiomeSource(
          * between adjacent cells. Larger value = bigger biomes; too small
          * means the pool index churns over short distances and reintroduces
          * fragmentation.
+         *
+         * Lowered 2048 → 1024 → 512 across 2026-05-17 iterations so themed
+         * Voronoi cells (typically ~2000 blocks across) contain MANY biome
+         * patches, not 1-2. At 512 a 2km cell holds ~16 patches → most of
+         * the theme pool gets sampled in a single cell. Greg's feedback
+         * was that the nether_core area was rendering as one biome
+         * (warped_forest); shrinking the patches gives the diversity the
+         * pool was designed for. Trade-off: tier pools in the easy core
+         * also patch more densely, so spawn looks slightly more varied
+         * (more biome cuts). Probably a win.
          */
-        private const val BIOME_PATCH_SCALE = 2048
+        private const val BIOME_PATCH_SCALE = 512
+
+        /**
+         * Wavelength (blocks) of the domain-warp noise applied to the Worley
+         * sample point. Smaller than [BIOME_PATCH_SCALE] so the warp curls
+         * within a patch — the goal is to bend Worley cell *boundaries*,
+         * not to scramble cells across each other. ~256 produces ripples
+         * roughly half a patch wide.
+         */
+        private const val WARP_NOISE_SCALE = 256
+
+        /**
+         * Maximum block displacement applied by the domain warp. The Worley
+         * bisector between two patches moves by up to ±this many blocks at
+         * any point along its length, so a previously straight edge becomes
+         * a wavy line varying by ±96. Larger amplitudes start fragmenting
+         * the patches; smaller amplitudes are visually imperceptible.
+         */
+        private const val WARP_AMPLITUDE = 96
+
+        /**
+         * Constant offset applied to the second [valueNoise2D] sample so the
+         * X-warp and Z-warp are independent. Without this offset both warps
+         * would be perfectly correlated and the displacement vector would
+         * lie along the diagonal — producing a stretched-but-still-straight
+         * boundary rather than a curling one. 8192 is well outside any
+         * reasonable cell-grid alignment, so the two noise fields are
+         * decorrelated.
+         */
+        private const val WARP_OFFSET = 8192
 
         val CODEC: MapCodec<VoronoiTieredBiomeSource> = RecordCodecBuilder.mapCodec { instance ->
             instance.group(
@@ -353,6 +487,8 @@ class VoronoiTieredBiomeSource(
                 RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("hard").forGetter { it.hard },
                 RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("hard_substitution").forGetter { it.hardSubstitution },
                 Seed.CODEC.listOf().fieldOf("seeds").forGetter { it.seeds },
+                Codec.unboundedMap(Codec.STRING, RegistryCodecs.homogeneousList(Registries.BIOME))
+                    .optionalFieldOf("themes", emptyMap()).forGetter { it.themes },
                 Codec.INT.optionalFieldOf("medium_min_radius", DEFAULT_MEDIUM_MIN_RADIUS).forGetter { it.mediumMinRadius },
                 Codec.INT.optionalFieldOf("hard_min_radius", DEFAULT_HARD_MIN_RADIUS).forGetter { it.hardMinRadius },
                 Codec.INT.optionalFieldOf("floor_jitter", DEFAULT_FLOOR_JITTER).forGetter { it.floorJitter },

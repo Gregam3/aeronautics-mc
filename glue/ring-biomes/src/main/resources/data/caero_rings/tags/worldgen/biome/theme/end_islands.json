@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "_comment": "Vanilla End biomes for the End-enclave seed. Paired with karos-terrain-overrides which: (a) prepends a surface rule painting end_stone on top of these biomes, (b) wraps final_density with the end_final function so the terrain is floating islands above a water column rather than vanilla overworld mountains. Sky stays overworld-coloured (vanilla End atmosphere requires the end dimension type) — but vanilla End-biome effects override sky/fog colour to dark, which is good enough.",
+  "values": [
+    "minecraft:end_highlands",
+    "minecraft:end_midlands",
+    "minecraft:end_barrens",
+    "minecraft:small_end_islands"
+  ]
+}

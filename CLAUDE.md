@@ -1,5 +1,98 @@
 # Project operating rules — Create Aeronautics Server
 
+## NO SILENT DEBUGGING — RULE NEGATIVE-ONE
+
+**All debugging reasoning must be in text output to the conversation, not
+in internal thinking. Greg can only see what I type. If I'm reasoning
+about "why is X failing", that reasoning happens in console-visible text,
+sentence by sentence, while I'm doing it.** Not after. Not summarized.
+Live, in band, where Greg can see it.
+
+This means: when I read a log line and form a hypothesis ("the say
+command isn't logging — must be a modded server issue"), I TYPE that
+hypothesis to Greg before I act on it. If I want to try a fix, I say
+what the fix is and why before I write code. If I revise the hypothesis
+mid-debug, I say that revision.
+
+**Not allowed**: thinking silently while a tool runs, debugging in my
+head between tool calls, deciding a course of action without saying it.
+
+Greg's words verbatim (2026-05-16): "debugging silently this is not
+allowed. all debugging must be output in this console, do you understand?
+There can be no internal thoughts."
+
+## NARRATE EVERYTHING — RULE ZERO
+
+**Greg cannot see tool calls. He sees only my text output. If I make a tool
+call without writing text first, he sees "Reading..." or nothing and assumes
+I am hung. This has cost hours. THIS IS THE #1 RULE OF THIS PROJECT.**
+
+**Going silent is NEVER safer than too-loud.** If a previous monitor flooded
+Greg's input, the fix is a 30s-cadence summary monitor, NOT no monitor.
+"I'll check when it completes" is wrong — Greg has lost two hours coming back
+to a hung process. Whenever I background a task, I MUST arm a heartbeat
+script that emits one summary line every 30 seconds, no faster. The summary
+must be informative ("phase1 acks=2/4, server pid=X alive, last log line:
+<line>") not just "still running". Four lines for a two-minute task is
+right; forty lines is flood; zero is failure.
+
+Concrete, non-negotiable protocol:
+
+1. **Before EVERY single tool call, write a one-line narration of what I'm
+   about to do and why.** Not "let me check" — concretely: "reading
+   world_audit.py to find the sleep loop" or "grepping for `time.sleep` in
+   the audit scripts". Even a Read of one file gets a one-liner.
+2. **Before a batch of parallel tool calls, write one sentence covering the
+   batch.** "Reading run-audit.sh and world_audit.py in parallel to map the
+   current pipeline."
+3. **If I am about to do >5 seconds of any silent work (multiple sequential
+   reads, large file reads, agent dispatch), tell Greg first.** Estimate the
+   duration. "About to read three ~800-line files — ~15s of silence
+   incoming, then I'll report back."
+4. **While waiting on a background task / audit / build / server boot /
+   gen-wait, every ≤30 seconds output a heartbeat** with a concrete
+   observable: PID alive? last log line timestamp? region file size? If
+   the observable hasn't changed for >2 minutes when it should be changing,
+   **assume hung — kill it and diagnose**. Don't wait the full timeout.
+5. **NEVER block on `time.sleep`, `proc.wait`, or any opaque sleep without
+   a heartbeat.** If the harness can't give me an event, I'm the one
+   polling and reporting.
+6. **If Greg asks "ready?" or "status?", I must already have a concrete
+   answer.** "Still running, will report when notified" is the failure
+   mode itself.
+
+The failure pattern I keep falling into: Greg sends a message → I read three
+files in sequence with no narration → 60s of "Reading..." on his screen → he
+correctly concludes I'm broken. **Talk first, tool-call second. Always.**
+
+## Status updates — never go silent while waiting
+
+**Every 30 seconds of waiting on anything (background task, audit, build,
+server boot, gen-wait), I MUST output a status line. If a task is hung,
+silence looks identical to "working" — and Greg has lost hours that way.**
+
+Concrete protocol when waiting on a background task:
+1. After kicking it off, give a tight ETA up front ("~3 min, will report at
+   each minute"). Don't say "waiting" and disappear.
+2. While waiting, every ~30s output a line: "still working — PID still
+   alive, last log line at HH:MM:SS, server log size N bytes" or whatever
+   is observable. Use the Monitor tool with a tight grep filter so
+   progress events stream automatically instead of relying on me to poll.
+3. If the same observable hasn't changed for >2 minutes when it should be
+   changing (log not advancing, region files not growing during gen,
+   python process CPU near zero when it should be busy), **assume hung —
+   kill it and diagnose**. Don't wait the full timeout.
+4. NEVER block waiting on a `time.sleep` or `proc.wait` without a heartbeat.
+   If a background task notification hasn't fired and the harness can't
+   give me an event, I should be the one polling progress and reporting.
+5. If I do nothing else right, do this: when Greg asks "ready?" or "what's
+   the status?", I must already have evidence to answer concretely. Not
+   "still running, will report when notified" — that's the failure mode.
+
+This isn't optional. The repeat failure mode: I launch a 3-minute audit,
+something hangs silently, I sit on the notification, 30+ minutes pass,
+Greg comes back to a wedged process. Cost: another lost hour.
+
 ## Autonomy
 
 **Default to maximum autonomy.** Greg is the chokepoint on testing, so minimize
@@ -86,6 +179,38 @@ requiring Greg to launch a client:
 
 If something can't be self-verified, say so plainly in the status report instead of
 claiming success.
+
+### Worldgen changes — the #1 rule
+
+**Never declare a worldgen change "done" without running the full
+`season3/test/karos-mapgen/run-audit.sh` (or `--replay`) and seeing every
+biome-category alignment check PASS.** Worldgen has many interacting layers
+(NovoAtlas, Lithostitched, vanilla noise, biome surface rules, mod features)
+and a fix for one biome can silently break another. Greg's bottleneck is the
+~3 minutes of generating a fresh world per test — every false "it's fixed"
+costs him a world, and he has burned dozens already.
+
+Concrete protocol for any biome/terrain/density change:
+
+1. Before making the change: skim the audit's category checks
+   (`ocean_align_*`, `mountain_align_*`, `nether_align_*`, `end_align_*`,
+   `land_biome_*` — extend if your change touches a category not yet
+   covered).
+2. Make the change.
+3. Run `bash season3/test/karos-mapgen/run-audit.sh` (full boot, ~3 min)
+   OR `python3 .../world_audit.py --staging /tmp/aero-s3-karos-test --replay`
+   if the previous boot is still on disk and you only changed the audit
+   logic / non-worldgen code.
+4. Gate on **0 failures across every category**, not just the one you were
+   targeting. A single failure in any category = the change isn't shipped.
+5. If a category isn't audited yet, **add the check first**, run it, then
+   make the change.
+6. Only after step 4 passes, sync the datapack with
+   `./season3/deploy-datapacks.sh` and tell Greg.
+
+This isn't optional. "Looks plausible" + "ship it for Greg to test" has cost
+the project two-digit hours of Greg's time. The audit is fast; an in-game
+fresh-world test is not.
 
 ### Dedicated-server harness pattern
 

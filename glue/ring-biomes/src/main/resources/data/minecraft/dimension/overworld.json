@@ -13,30 +13,42 @@
       "medium": "#caero_rings:tier_medium",
       "hard":   "#caero_rings:tier_hard",
       "hard_substitution": "#caero_rings:tier_hard_common",
+      "themes": {
+        "mountain_high": "#caero_rings:theme/mountain_high",
+        "jungle_outer":  "#caero_rings:theme/jungle_outer",
+        "jungle_swamp":  "#caero_rings:theme/jungle_swamp",
+        "jungle_deep":   "#caero_rings:theme/jungle_deep",
+        "cursed_wastes": "#caero_rings:theme/cursed_wastes",
+        "nether_core":   "#caero_rings:theme/nether_core",
+        "end_islands":   "#caero_rings:theme/end_islands"
+      },
       "medium_min_radius": 1500,
       "hard_min_radius": 1500,
       "floor_jitter": 600,
-      "_comment": "Voronoi picks nearest seed; *_min_radius fields then floor the tier so we guarantee an easy core. floor_jitter perturbs both floors via low-frequency value noise so the easy/medium boundary is wavy rather than a circle (effective radius ranges roughly [base-jitter, base+jitter]). Seed radii are deliberately spread across [1700, 4700] — easy core anchored at origin, medium seeds mostly at r ≈ 1700–2500 with two outer pockets near r ≈ 4000, hard seeds mostly at r ≈ 3700–4700 with two inner intrusions near r ≈ 3000. Net result: bias toward easy near spawn and hard at the edges, but the rings aren't concentric and same-radius cells can land in different tiers.",
+      "_comment": "Hand-placed themed regions (Greg's intent, 2026-05-16): vanilla mix in centre, massive mountain wall to the west, jungle pair (outer + deep separated by a swamp 'mollet') to the east, cursed_wastes far-north as the 'nether very far out'. Themes only apply OUTSIDE the radius floors — so a HARD-themed seed inside hard_min_radius behaves as vanilla MEDIUM until the player crosses the floor. Plain (no-theme) hard seeds at the other quadrants supply badlands/ice-spikes variety so themed seeds don't dominate the entire outer ring. Cell-boundary buffer (±200 blocks) automatically inserts a MEDIUM transition strip between any EASY↔HARD adjacency, so the themed-HARD cells never abut the easy core without a smooth Medium scallop in between.",
       "seeds": [
         { "x":     0, "z":     0, "tier": "easy"   },
 
-        { "x":  1700, "z":   200, "tier": "medium" },
-        { "x":   800, "z":  1900, "tier": "medium" },
-        { "x": -1300, "z":  1500, "tier": "medium" },
-        { "x": -2200, "z":  -600, "tier": "medium" },
-        { "x":  -700, "z": -2300, "tier": "medium" },
-        { "x":  1900, "z": -1500, "tier": "medium" },
-        { "x": -3500, "z":  2300, "tier": "medium" },
-        { "x":  3500, "z": -2700, "tier": "medium" },
+        { "x":  1800, "z": -1800, "tier": "medium" },
+        { "x":  1900, "z":  1600, "tier": "medium" },
+        { "x": -1500, "z": -1700, "tier": "medium" },
 
-        { "x":  2700, "z":  1500, "tier": "hard"   },
-        { "x": -1700, "z": -3000, "tier": "hard"   },
-        { "x":  4200, "z":   800, "tier": "hard"   },
-        { "x":  2200, "z":  3700, "tier": "hard"   },
-        { "x": -2700, "z":  3500, "tier": "hard"   },
-        { "x": -4500, "z":  -700, "tier": "hard"   },
-        { "x": -3000, "z": -3300, "tier": "hard"   },
-        { "x":  1100, "z": -4500, "tier": "hard"   }
+        { "x": -4000, "z":     0, "tier": "hard",   "theme": "mountain_high" },
+        { "x":  3500, "z": -1000, "tier": "medium", "theme": "jungle_outer"  },
+        { "x":  4000, "z":   300, "tier": "medium", "theme": "jungle_swamp"  },
+        { "x":  4500, "z":  1500, "tier": "hard",   "theme": "jungle_deep"   },
+
+        { "x":     0, "z": -3000, "tier": "hard",   "theme": "cursed_wastes" },
+        { "x": -2000, "z": -4500, "tier": "hard",   "theme": "cursed_wastes" },
+        { "x":  2000, "z": -4500, "tier": "hard",   "theme": "cursed_wastes" },
+        { "x":     0, "z": -4500, "tier": "hard",   "theme": "nether_core"   },
+
+        { "x":  4000, "z":  2800, "tier": "hard",   "theme": "end_islands"   },
+
+        { "x":  -700, "z":  2300, "tier": "medium" },
+
+        { "x": -3500, "z": -3500, "tier": "hard"   },
+        { "x":  2500, "z": -3700, "tier": "hard"   }
       ]
     }
   }

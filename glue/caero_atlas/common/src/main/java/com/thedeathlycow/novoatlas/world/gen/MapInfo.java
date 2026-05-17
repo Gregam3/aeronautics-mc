@@ -14,11 +14,10 @@ import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.Optional;
 
 public record MapInfo(
-        ResourceKey<MapImage> heightMap,
+        Optional<ResourceKey<MapImage>> heightMap,
         ColorMapBiomeProvider surfaceBiomes,
         Optional<LayeredMapBiomeProvider> caveBiomes,
         int startingY,
@@ -27,8 +26,15 @@ public record MapInfo(
 ) {
     public static final Codec<MapInfo> DIRECT_CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
+                    // Karos fork: height_map is OPTIONAL. The chunk generator
+                    // uses the registry's vanilla / Lithostitched-wrapped
+                    // final_density for terrain shape, so a painted heightmap
+                    // PNG isn't required to drive the world. When omitted,
+                    // getHeightMapElevation returns the fallback (or sea
+                    // level when no fallback was provided), and cave_biomes
+                    // become a no-op since they're keyed off heightmap depth.
                     ResourceKey.codec(NovoAtlasResourceKeys.HEIGHTMAP)
-                            .fieldOf("height_map")
+                            .optionalFieldOf("height_map")
                             .forGetter(MapInfo::heightMap),
                     ColorMapBiomeProvider.CODEC.codec()
                             .fieldOf("surface_biomes")
@@ -50,25 +56,37 @@ public record MapInfo(
 
     public static final Codec<Holder<MapInfo>> CODEC = RegistryFileCodec.create(NovoAtlasResourceKeys.MAP_INFO, DIRECT_CODEC);
 
-    public static MapImage lookupHeightmap(ResourceKey<MapImage> map) {
-        return Objects.requireNonNull(ImageManager.HEIGHTMAP.getImage(map), "Missing height map image " + map);
+    @Nullable
+    public static MapImage lookupHeightmap(Optional<ResourceKey<MapImage>> map) {
+        return map.map(ImageManager.HEIGHTMAP::getImage).orElse(null);
     }
 
     public static MapImage lookupBiomeMap(ResourceKey<MapImage> map) {
-        return Objects.requireNonNull(ImageManager.BIOME_MAP.getImage(map), "Missing biome map image " + map);
+        MapImage img = ImageManager.BIOME_MAP.getImage(map);
+        if (img == null) {
+            throw new IllegalStateException("Missing biome map image " + map);
+        }
+        return img;
     }
 
     public int getHeightMapElevation(int x, int z, int fallback) {
-        return lookupHeightmap(this.heightMap).sample(x, z, this, fallback);
+        MapImage img = lookupHeightmap(this.heightMap);
+        if (img == null) return fallback;
+        return img.sample(x, z, this, fallback);
     }
 
     public int getHeightMapElevation(int x, int z) {
-        return lookupHeightmap(this.heightMap).sample(x, z, this);
+        MapImage img = lookupHeightmap(this.heightMap);
+        // No-heightmap case: return startingY as a benign default so
+        // callers that use this for cave-band math still get a plausible
+        // mid-world reference instead of a NPE.
+        if (img == null) return this.startingY;
+        return img.sample(x, z, this);
     }
 
     @NotNull
     public Holder<Biome> getBiome(int x, int y, int z, @NotNull Holder<Biome> defaultBiome) {
-        if (this.caveBiomes.isPresent()) {
+        if (this.caveBiomes.isPresent() && this.heightMap.isPresent()) {
             Holder<Biome> caveBiome = this.getCaveBiome(x, y, z, this.caveBiomes.orElseThrow());
             if (caveBiome != null) {
                 return caveBiome;

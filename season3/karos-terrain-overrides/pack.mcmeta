@@ -1,6 +1,6 @@
 {
   "pack": {
     "pack_format": 48,
-    "description": "Caero Karos terrain overrides \u2014 Nether/End density wrap."
+    "description": "Karos terrain overrides — surface palette + density wraps to render Nether/End biomes correctly when they appear in the overworld via caero_rings themed seeds."
   }
 }

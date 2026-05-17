@@ -18,7 +18,9 @@
 | **Create** | `mc1.21.1-6.0.9` | NeoForge | 2026-01-02 | [Modrinth](https://modrinth.com/mod/create) |
 | **Create: Aeronautics** | `1.0.3+mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/create-aeronautics) · [GitHub](https://github.com/Creators-of-Aeronautics/Simulated-Project) |
 | **Create: Numismatics** | `1.0.20+neoforge-mc1.21.1` | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/numismatics) |
-| **Tectonic** | `3.0.22-neoforge-21.1` | NeoForge | 2026-04-15 | [Modrinth](https://modrinth.com/mod/tectonic) · [GitHub](https://github.com/Apollounknowndev/tectonic) |
+| ~~**Tectonic**~~ | ~~`3.0.22-neoforge-21.1`~~ | ~~NeoForge~~ | ~~2026-04-15~~ | **DISABLED 2026-05-17. Jar kept as `.disabled` for reference. Do NOT use, recommend, or configure — see memory `feedback_no_tectonic`. Replaced by Deeper Oceans for ocean depth.** |
+| **Deeper Oceans** | `2.0.0-neoforge-1.21.1` | NeoForge | 2025-06-18 | [Modrinth](https://modrinth.com/mod/deeper-oceans) — Lithostitched-based mod that wraps `minecraft:overworld/offset` density to make oceans N× deeper. Config at `config/deeper_oceans.json`. Currently `depth_multiplier=3.0` (3× vanilla depth) and `monument_offset=-50`. |
+| **Tree Giant** (`taxtg`) | `2.0.1-neoforge-1.21.1` | NeoForge | 2025 | [Modrinth](https://modrinth.com/mod/tree-giant) |
 | ~~Continents~~ | ~~`1.1.13`~~ | ~~datapack~~ | ~~2026-03-29~~ | **Removed 2026-04-22 — conflicts with Tectonic on `noise_router/continents`; Tectonic picked.** |
 | **Distant Horizons** | `3.0.1-b-1.21.1` (beta) | NeoForge | 2026-04-19 | [Modrinth](https://modrinth.com/mod/distanthorizons) |
 | **Kotlin For Forge** | `5.11.0` | NeoForge | 2026-01-17 | [Modrinth](https://modrinth.com/mod/kotlin-for-forge) |
@@ -45,6 +47,14 @@
 - **Kotlin For Forge (KFF)** is required at runtime by our glue mods (they're
   written in Kotlin). Installed once on the server; all players need it in their
   mod folder.
+- **Tree Giant** ships 5 giant tree jigsaw structures (giant_jungle / giant_oak /
+  giant_birch / giant_spruce / giant_cherryblossom). The karos-datapack scopes
+  `taxtg:giant_jungle_tree` to the custom biome `caero_karos:ancient_jungle`
+  only (paints onto the deep-green zone of the mask, color `#054E05`) — vanilla
+  jungles elsewhere stay free of giants. The other four giant species remain
+  at their vanilla biome defaults so they appear wherever the mask paints those
+  biomes. Spacing tightened from `45/30` to `18/10` for the giant_jungle_tree
+  structure_set so the Ancient Jungle reads as a "land of giants" canopy.
 
 ---
 
@@ -53,6 +63,14 @@
 | Mod | Latest 1.21.1 | Date | Source |
 |---|---|---|---|
 | **Born in Chaos** | `1.7.5` | 2026-04-12 | [Modrinth](https://modrinth.com/mod/borninchaos) |
+| ~~**Sea Eater Mod**~~ | ~~`1.0.0`~~ | ~~2025-11-28~~ | **Removed 2026-05-16 — model/animation quality below bar. Jar still archived in `.research/sea-monsters/`.** |
+| **Kraken Mod** (`lairhisson_boss`) | `1.0.0` | 2025 | [Modrinth](https://modrinth.com/mod/kraken-mod) |
+
+~~Sea Eater Mod~~ removed 2026-05-16: art quality was the bottleneck. The
+`season3/karos-datapack/data/seaeater/` biome_modifier overrides have been
+deleted with the jar. Kraken Mod is the replacement deep-ocean threat.
+
+**Kraken Mod** ships a single boss-tier encounter: a **Kraken Lair** jigsaw structure spawning in `deep_ocean`, `deep_cold_ocean`, and `deep_lukewarm_ocean` (structure_set spacing `20/15`). The kraken drops a **Kraken Key** on death; the key opens an underwater treasure block found inside the lair. MCreator-built, GeckoLib-rendered. Mod namespace is `lairhisson_boss`. No datapack scoping changes yet — running at mod defaults until first in-game look.
 
 ### 🚫 Not available on 1.21.1
 - **Creatures and Beasts** — no 1.21.1 versions on Modrinth.
@@ -268,6 +286,8 @@ Added 2026-04-26 as part of performance tuning. See `runbook.md` §13 for the fu
 |---|---|
 | **Radioactive** (`3.8.0`) | Mcreator-generated `BlockRadiationProcedure.onEntityTick` ran a block-state lookup for every entity in the world every tick, costing ~50% of tick budget on a healthy server. Disabled 2026-04-26. |
 | **Alex's Mobs** (`1.22.17`) | Showed up as a 16× outlier in spark profile under load (heavy AI/pathfinding for many ambient mobs). Disabled 2026-04-26 server- and client-side. The mod was originally listed as "dropped" in the early plan because the 1.20.1 ceiling claim turned out to be wrong (current version is 1.22.17), then quietly slipped back into the instance — perf data confirmed the original drop was the right call. |
+| **NovoAtlas (karos fork)** (`1.1.0+1.21.1-karos.0`) | Mask-driven biome source from `glue/caero_atlas/`. Dropped 2026-05-16 along with the painted-PNG approach — terrain shape and biome label couldn't be made to agree without flat plateaus or sheer cliffs. Themed Voronoi seeds in `caero_rings` replaced its region-placement role. Jar kept on disk for rollback if the new design needs to be reverted. |
+| **caero_nether_atmosphere** (`0.1.0`) | Suppressed the overworld sky / clouds inside painted nether enclaves. Without painted enclaves it does nothing. Disabled 2026-05-16 alongside NovoAtlas. Source still in `glue/caero_nether_atmosphere/` — re-enable if/when literal Nether-style enclaves come back via a custom biome. |
 
 ---
 

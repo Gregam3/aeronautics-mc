@@ -1,0 +1,13 @@
+{
+  "_comment": "Free-roaming Kraken (lairhisson_boss:kraken) in all deep ocean biomes — they previously only existed inside the Kraken Lair structure. Weight 2 (very rare; vanilla guardians spawn at weight 1, drowned at 5). count 1/1 — never spawn as a group. WATER_CREATURE mob category matches the entity's registered category (squid-level). With Deeper Oceans active, deep ocean biomes have ~99-block water columns so the Kraken has plenty of space to swim around.",
+  "type": "neoforge:add_spawns",
+  "biomes": "#minecraft:is_deep_ocean",
+  "spawners": [
+    {
+      "type": "lairhisson_boss:kraken",
+      "weight": 2,
+      "minCount": 1,
+      "maxCount": 1
+    }
+  ]
+}

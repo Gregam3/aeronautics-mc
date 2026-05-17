@@ -1,0 +1,66 @@
+{
+  "_comment": "Vanilla End's final_density structure, Y-shifted to put islands at overworld Y=180-300, plus belt-and-braces air clamps so nothing solid generates outside that band. The post-gen handler (NetherFluidFix → BiomeColumnPostGen) sweeps the rest. Vanilla End at Y < 4 has density ~-0.234 (mostly air) which the air clamp reinforces; below Y=170 we force -30 to guarantee void. Above Y=310 the same. Inside Y=180-300, the vanilla shape with sloped_cheese / inner+outer gradients / squeeze / interpolated / blend_density produces authentic floating-island terrain — irregular bottoms (NOT flat cliffs), gappy tops, scattered sky islands. The Y values are shifted +176 (vanilla 4→180, 32→208, 56→232) and the upper decay is compressed (vanilla 312→300) so the band fits inside our overworld build height.",
+  "type": "minecraft:add",
+  "argument1": {
+    "_comment": "Vanilla End final_density structure, Y-shifted.",
+    "type": "minecraft:squeeze",
+    "argument": {
+      "type": "minecraft:mul",
+      "argument1": 0.64,
+      "argument2": {
+        "type": "minecraft:interpolated",
+        "argument": {
+          "type": "minecraft:blend_density",
+          "argument": {
+            "type": "minecraft:add",
+            "argument1": -0.234375,
+            "argument2": {
+              "type": "minecraft:mul",
+              "argument1": {
+                "type": "minecraft:y_clamped_gradient",
+                "from_value": 0.0, "from_y": 180,
+                "to_value":   1.0, "to_y":   208
+              },
+              "argument2": {
+                "type": "minecraft:add",
+                "argument1": 0.234375,
+                "argument2": {
+                  "type": "minecraft:add",
+                  "argument1": -23.4375,
+                  "argument2": {
+                    "type": "minecraft:mul",
+                    "argument1": {
+                      "type": "minecraft:y_clamped_gradient",
+                      "from_value": 1.0, "from_y": 232,
+                      "to_value":   0.0, "to_y":   300
+                    },
+                    "argument2": {
+                      "type": "minecraft:add",
+                      "argument1": 23.4375,
+                      "argument2": "minecraft:end/sloped_cheese"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "argument2": {
+    "type": "minecraft:add",
+    "argument1": {
+      "_comment": "Force void below Y=170: ramps from 0 above to -30 below. Stacks with vanilla End's natural -0.234 below the start Y to guarantee no terrain underneath.",
+      "type": "minecraft:y_clamped_gradient",
+      "from_value": -30.0, "from_y": 160,
+      "to_value":    0.0, "to_y":   170
+    },
+    "argument2": {
+      "_comment": "Force void above Y=310 — same idea above the island band.",
+      "type": "minecraft:y_clamped_gradient",
+      "from_value":   0.0, "from_y": 300,
+      "to_value":  -30.0, "to_y":   310
+    }
+  }
+}

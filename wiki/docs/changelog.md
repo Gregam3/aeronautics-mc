@@ -6,6 +6,69 @@ for a specific item / mechanic.
 
 ---
 
+## 2026-05-16
+
+**World (hand-placed regions — themed Voronoi seeds)**
+
+- **Painted-map worldgen removed.** The previous "painted PNG drives the
+  whole map" approach is gone — terrain shape and biome label kept
+  fighting each other and the world looked unnatural. Replaced with a
+  cleaner approach: vanilla Minecraft + Tectonic provide terrain
+  everywhere, and a handful of hand-placed regions add character on top.
+- **Mountain wall — west.** A wide region of tall snowy/stony peaks
+  centred ~4000 blocks west of spawn. Tectonic does the elevation work;
+  the region carries jagged_peaks, frozen_peaks, stony_peaks, RU spires,
+  towering_cliffs, mountains, arid_mountains, chalk_cliffs, pine_slopes.
+- **Jungle complex — east.** Travelling east from spawn you cross
+  ~3500 blocks of normal forests/plains, then enter an outer jungle band
+  (vanilla jungles + RU tropics/rainforest), then a wetland strip
+  (mangrove + bayou + fen swamps), then the **deep jungle interior** —
+  Ancient Jungle with Tree Giants, plus dense RU rainforest. The swamp
+  strip works as a "moat" between the two jungle bands.
+- **Cursed Wastes — far north.** ~4500 blocks north of spawn, the world
+  turns into a dry, alien region: badlands, eroded badlands, RU
+  joshua_desert, RU outback, RU saguaro_desert, RU ashen_woodland. Hot,
+  hostile, intentionally unwelcoming.
+- **Spawn island unchanged.** The core ~1500-block radius around spawn
+  is still vanilla-natural forest / plains / meadow. The themed regions
+  only kick in beyond that floor, so spawn safety is preserved.
+- Transitions between the easy core and the themed regions get an
+  automatic ~400-block strip of plain medium biomes (taigas, savannas,
+  RU forests) so the boundary isn't a cliff — it's a walk.
+
+**World (deep ocean)**
+
+- **Sea Eater Mod removed.** The Sea Eater and El Gran Maja are no longer
+  in the game. Kraken Lair (see below) is now the deep-ocean threat.
+
+**World (Kraken Lair)**
+
+- **Kraken Mod installed.** Hidden underwater jigsaw structures
+  ("Kraken Lair") spawn on the seafloor of `deep_ocean`, `deep_cold_ocean`,
+  and `deep_lukewarm_ocean`. Each lair contains a single boss-tier
+  **Kraken** that drops a **Kraken Key** on death; the key unlocks a
+  treasure block inside the lair. Sea Eater and El Gran Maja remain in
+  the deep-ocean ambient pool — they coexist with the Kraken for now
+  while we evaluate visual quality of each.
+
+**World (Ancient Jungle)**
+
+- **Tree Giant mod installed.** Adds five jigsaw-structure giant tree
+  variants (jungle / oak / birch / spruce / cherryblossom) that dwarf
+  vanilla trees by several times.
+- **Ancient Jungle biome added.** A new custom biome
+  (`caero_karos:ancient_jungle`) paints into the deep-green pockets of
+  the world map. Jungle climate, jungle floor — bamboo, vines, parrots,
+  ocelots, pandas, glow lichen — but the normal-sized jungle trees have
+  been stripped out and replaced with **giant jungle trees** only.
+  Spacing is tightened so the canopy reads as a true "land of giants".
+- Giant jungle trees **only** spawn inside Ancient Jungle. Normal jungle
+  biomes elsewhere on the map remain free of them. The other four giant
+  species spawn in their respective vanilla biomes (forest, birch forest,
+  taiga, cherry grove) wherever the map paints them.
+
+---
+
 ## 2026-05-05
 
 **Specialization (wiki)**

@@ -1,0 +1,130 @@
+{
+  "_comment": "Prepend a surface rule to the overworld dimension that paints netherrack inside nether-tagged biomes and end_stone inside end-tagged biomes. Without this, those biomes' columns are filled with overworld stone (the dimension's default_block), breaking the visual. PREPEND injection means our rule runs FIRST; the inner condition makes us only intervene when the cell is one of these biomes — vanilla overworld surface rule still handles everything else.",
+  "type": "lithostitched:add_surface_rule",
+  "priority": 1000,
+  "levels": ["minecraft:overworld"],
+  "injection_type": "prepend",
+  "surface_rule": {
+    "type": "minecraft:sequence",
+    "sequence": [
+      {
+        "_comment": "Nether-biome columns: paint netherrack at every Y. Top layers get overridden by the per-biome rules below.",
+        "type": "minecraft:condition",
+        "if_true": {
+          "type": "minecraft:biome",
+          "biome_is": [
+            "minecraft:nether_wastes",
+            "minecraft:crimson_forest",
+            "minecraft:warped_forest",
+            "minecraft:soul_sand_valley",
+            "minecraft:basalt_deltas"
+          ]
+        },
+        "then_run": {
+          "type": "minecraft:sequence",
+          "sequence": [
+            {
+              "_comment": "crimson_nylium on top of crimson_forest, like vanilla nether.",
+              "type": "minecraft:condition",
+              "if_true": {
+                "type": "minecraft:biome",
+                "biome_is": ["minecraft:crimson_forest"]
+              },
+              "then_run": {
+                "type": "minecraft:condition",
+                "if_true": {
+                  "type": "minecraft:stone_depth",
+                  "offset": 0, "add_surface_depth": false,
+                  "secondary_depth_range": 0, "surface_type": "floor"
+                },
+                "then_run": {
+                  "type": "minecraft:block",
+                  "result_state": { "Name": "minecraft:crimson_nylium" }
+                }
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "if_true": {
+                "type": "minecraft:biome",
+                "biome_is": ["minecraft:warped_forest"]
+              },
+              "then_run": {
+                "type": "minecraft:condition",
+                "if_true": {
+                  "type": "minecraft:stone_depth",
+                  "offset": 0, "add_surface_depth": false,
+                  "secondary_depth_range": 0, "surface_type": "floor"
+                },
+                "then_run": {
+                  "type": "minecraft:block",
+                  "result_state": { "Name": "minecraft:warped_nylium" }
+                }
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "if_true": {
+                "type": "minecraft:biome",
+                "biome_is": ["minecraft:soul_sand_valley"]
+              },
+              "then_run": {
+                "type": "minecraft:condition",
+                "if_true": {
+                  "type": "minecraft:stone_depth",
+                  "offset": 0, "add_surface_depth": false,
+                  "secondary_depth_range": 0, "surface_type": "floor"
+                },
+                "then_run": {
+                  "type": "minecraft:block",
+                  "result_state": { "Name": "minecraft:soul_sand" }
+                }
+              }
+            },
+            {
+              "type": "minecraft:condition",
+              "if_true": {
+                "type": "minecraft:biome",
+                "biome_is": ["minecraft:basalt_deltas"]
+              },
+              "then_run": {
+                "type": "minecraft:condition",
+                "if_true": {
+                  "type": "minecraft:stone_depth",
+                  "offset": 0, "add_surface_depth": false,
+                  "secondary_depth_range": 0, "surface_type": "floor"
+                },
+                "then_run": {
+                  "type": "minecraft:block",
+                  "result_state": { "Name": "minecraft:basalt" }
+                }
+              }
+            },
+            {
+              "_comment": "Default for nether biomes: paint netherrack at every Y (after the per-biome top blocks above had their say).",
+              "type": "minecraft:block",
+              "result_state": { "Name": "minecraft:netherrack" }
+            }
+          ]
+        }
+      },
+      {
+        "_comment": "End-biome columns: paint end_stone at every Y. Float-island shape comes from the density-function wrap (see end_density_swap.json).",
+        "type": "minecraft:condition",
+        "if_true": {
+          "type": "minecraft:biome",
+          "biome_is": [
+            "minecraft:end_highlands",
+            "minecraft:end_midlands",
+            "minecraft:end_barrens",
+            "minecraft:small_end_islands"
+          ]
+        },
+        "then_run": {
+          "type": "minecraft:block",
+          "result_state": { "Name": "minecraft:end_stone" }
+        }
+      }
+    ]
+  }
+}

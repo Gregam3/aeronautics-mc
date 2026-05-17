@@ -285,7 +285,15 @@ public class ImageMapChunkGenerator extends NoiseBasedChunkGenerator {
     }
 
     private int sampleElevation(int x, int z) {
-        return this.mapInfo.value().getHeightMapElevation(x, z, this.getMinY() - 1);
+        // Karos fork: heightmap is optional. When absent, return getMinY()
+        // — keeps the doFill gate ineffective (column never skipped) and
+        // defers all terrain shape to the registry noise router (vanilla
+        // + Lithostitched per-biome-color final_density swaps).
+        MapInfo info = this.mapInfo.value();
+        if (info.heightMap().isEmpty()) {
+            return this.getMinY();
+        }
+        return info.getHeightMapElevation(x, z, this.getMinY() - 1);
     }
 
     // Biome ResourceKeys used for the karos fork's block-palette routing.
@@ -300,13 +308,28 @@ public class ImageMapChunkGenerator extends NoiseBasedChunkGenerator {
             Biomes.END_HIGHLANDS, Biomes.END_MIDLANDS, Biomes.END_BARRENS,
             Biomes.SMALL_END_ISLANDS, Biomes.THE_END,
     };
+    private static final ResourceKey<Biome>[] OCEAN_BIOMES = new ResourceKey[]{
+            Biomes.OCEAN, Biomes.WARM_OCEAN, Biomes.LUKEWARM_OCEAN, Biomes.COLD_OCEAN,
+            Biomes.FROZEN_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN,
+            Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_FROZEN_OCEAN,
+    };
 
     private BlockState remapBlockForBiome(BlockState original, ChunkAccess chunk, int x, int y, int z) {
         // Biome cells are 4x4x4 blocks; convert block coords -> quart pos.
         Holder<Biome> biome = chunk.getNoiseBiome(QuartPos.fromBlock(x), QuartPos.fromBlock(y), QuartPos.fromBlock(z));
-        boolean isNether = false, isEnd = false;
+        boolean isNether = false, isEnd = false, isOcean = false;
         for (ResourceKey<Biome> k : NETHER_BIOMES) { if (biome.is(k)) { isNether = true; break; } }
         if (!isNether) for (ResourceKey<Biome> k : END_BIOMES) { if (biome.is(k)) { isEnd = true; break; } }
+        if (!isNether && !isEnd) for (ResourceKey<Biome> k : OCEAN_BIOMES) { if (biome.is(k)) { isOcean = true; break; } }
+
+        // Karos fork: vanilla aquifer's fluidLevelFloodedness noise refuses to
+        // flood some XZ columns even when terrain density says air below sea
+        // level — leaving painted ocean zones as dry stone pits with air
+        // above. Force water in air cells below sea level for ocean biomes.
+        if (isOcean && original.isAir() && y < this.getSeaLevel()) {
+            return Blocks.WATER.defaultBlockState();
+        }
+
         if (!isNether && !isEnd) return original;
         if (original.is(Blocks.STONE) || original.is(Blocks.DEEPSLATE) || original.is(Blocks.DIRT) || original.is(Blocks.GRASS_BLOCK)) {
             return isNether ? Blocks.NETHERRACK.defaultBlockState() : Blocks.END_STONE.defaultBlockState();

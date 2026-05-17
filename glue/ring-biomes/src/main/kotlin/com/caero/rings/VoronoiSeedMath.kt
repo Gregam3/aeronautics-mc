@@ -2,6 +2,7 @@ package com.caero.rings
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
+import java.util.Optional
 
 /**
  * Pure-Kotlin Voronoi seed types and lookup. Split out of
@@ -9,15 +10,26 @@ import com.mojang.serialization.codecs.RecordCodecBuilder
  * `BiomeSource`, whose static init requires NeoForge's runtime (FeatureFlags,
  * LoadingModList). By keeping the math here, JUnit tests can exercise
  * [nearestSeedOf] without booting Minecraft.
+ *
+ * [theme] is an optional name keying into [VoronoiTieredBiomeSource]'s
+ * `themes` map; when set, the seed's cell substitutes biomes from that
+ * named pool instead of the per-tier default pool. The tier still controls
+ * the radius-floor downgrade (a HARD-themed seed near origin still resolves
+ * to easy biomes — see `VoronoiTieredBiomeSource.resolveTier`), so themes
+ * only "kick in" beyond the floor.
  */
-data class Seed(val x: Int, val z: Int, val tier: Tier) {
+data class Seed(val x: Int, val z: Int, val tier: Tier, val theme: String? = null) {
     companion object {
         val CODEC: Codec<Seed> = RecordCodecBuilder.create { instance ->
             instance.group(
                 Codec.INT.fieldOf("x").forGetter(Seed::x),
                 Codec.INT.fieldOf("z").forGetter(Seed::z),
                 Tier.CODEC.fieldOf("tier").forGetter(Seed::tier),
-            ).apply(instance, ::Seed)
+                Codec.STRING.optionalFieldOf("theme")
+                    .forGetter { Optional.ofNullable(it.theme) },
+            ).apply(instance) { x, z, tier, themeOpt ->
+                Seed(x, z, tier, themeOpt.orElse(null))
+            }
         }
     }
 }

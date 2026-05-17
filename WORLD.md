@@ -1,11 +1,18 @@
 # World Rendering & Map Design
 
-**Version:** 0.4.0
-**Last updated:** 2026-04-24
+**Version:** 0.5.0
+**Last updated:** 2026-05-16
 **Scope:** How the overworld looks and plays at world-creation time — terrain
 (Tectonic), biome distribution (Regions Unexplored + TerraBlender), Voronoi
-tier assignment (`caero_rings`), and tier-based hostile mob pressure (Born in
-Chaos + our spawn handlers).
+tier + **themed** region assignment (`caero_rings`), and tier-based hostile
+mob pressure (Born in Chaos + our spawn handlers).
+
+**v0.5.0 change:** Themed seeds added to `caero_rings:voronoi_tiered`. Each
+Voronoi seed can optionally carry a biome-pool `theme` that overrides the
+tier-default substitution pool. Used to hand-place a mountain wall, jungle
+pair, and "cursed wastes" Nether-equivalent at chosen world coordinates.
+The painted-PNG mask approach (NovoAtlas fork, karos-datapack mask) has been
+removed — see `KAROS_NEXT_PLAN.md` for the post-mortem.
 
 Per-layer plans:
 - Voronoi tiering — [`glue/ring-biomes/PLAN.md`](./glue/ring-biomes/PLAN.md)
@@ -45,7 +52,7 @@ without the RPG boss framing.
 
 ---
 
-## 2. Voronoi tier zones
+## 2. Voronoi tier zones + themed regions
 
 Biomes are sorted into three tag sets:
 - **Easy:** 36 biomes (gentle forests, plains, meadows, jungles) — tagged in `caero_rings:tier_easy`
@@ -56,9 +63,47 @@ Biomes are sorted into three tag sets:
 Distance floors:
 - `medium_min = 1500`: medium and hard downgrade to easy inside 1500 blocks of origin.
 - `hard_min = 1500`: hard downgrades to medium between 1500 and `hardMin`, full hard beyond.
+- `floor_jitter = 600`: the two floors are perturbed per-cell by ±600 blocks
+  of coherent value noise, so the easy-core border scallops rather than
+  forming a perfect circle.
+
+### Themed seeds (v0.5.0)
+
+A seed in the dimension JSON can optionally carry a `theme` field, e.g.:
+```json
+{ "x": -4000, "z": 0, "tier": "hard", "theme": "mountain_high" }
+```
+The biome source's `themes` map binds each theme name to a tag of biomes.
+When a cell falls inside a themed seed AND past the radius floor, that
+seed's theme pool replaces the tier-default pool for substitution.
+
+Current themes (`data/caero_rings/tags/worldgen/biome/theme/*.json`):
+
+| Theme | Biomes | Seed location | Intent |
+|---|---|---|---|
+| `mountain_high` | jagged/frozen/stony_peaks, windswept_hills (+RU spires, towering_cliffs, mountains, arid_mountains, chalk_cliffs, pine_slopes) | (-4000, 0) HARD | Massive western mountain wall — Tectonic does the elevation work, theme supplies palette + mob spawns. |
+| `jungle_outer` | jungle, sparse_jungle, bamboo_jungle, RU tropics, RU rainforest, RU sparse_rainforest | (3500, -1000) MEDIUM | Outer jungle band on the east. |
+| `jungle_swamp` | swamp, mangrove_swamp, RU bayou + old_growth_bayou + fen + marsh | (4000, 300) MEDIUM | The "mollet" — wetland strip between the two jungles. |
+| `jungle_deep` | caero_karos:ancient_jungle, RU rainforest, RU tropics | (4500, 1500) HARD | Deep jungle interior past the swamp moat — Tree Giants spawn here (`taxtg:giant_jungle_tree` scoped to `caero_karos:ancient_jungle`). |
+| `cursed_wastes` | badlands, eroded_badlands, wooded_badlands, RU ashen_woodland, RU joshua_desert, RU outback, RU saguaro_desert, RU dry_bushland | (0, -4500) HARD | The "Nether very far out" — far-north badlands-family region with hot/dry/alien palette. |
+
+The themed seeds sit alongside 1 EASY (origin), 4 plain MEDIUM mid-ring
+pockets, and 3 plain HARD outer pockets. 13 seeds total.
+
+Themes only apply OUTSIDE the radius floors — a HARD-themed seed inside
+`hard_min_radius` resolves to vanilla MEDIUM until the player crosses the
+floor. The cell-boundary buffer (±200 blocks of EASY↔HARD adjacency) forces
+plain MEDIUM with no theme — so themed-HARD cells never abut the easy core
+without a smooth ~400-block MEDIUM scallop in between.
+
+Themed substitution **bypasses climate band filtering** — the whole point of
+a theme is to override climate-driven biome selection. Substitution uses
+the Worley-cell hash pick from the theme pool only. This is what makes
+"this region is mountains" actually work regardless of the underlying
+multinoise climate at that coord.
 
 Confirmed at boot via log line:
-`caero_rings DIAG: medium_min=1500 hard_min=1500 seeds=15 easy_size=36 medium_size=38 hard_size=17 hard_sub_size=8`
+`caero_rings DIAG: medium_min=1500 hard_min=1500 floor_jitter=600 seeds=13 easy_size=36 medium_size=38 hard_size=17 hard_sub_size=8 themes=[mountain_high=12, jungle_outer=6, jungle_swamp=6, jungle_deep=3, cursed_wastes=8]`
 
 ---
 

@@ -1,34 +1,8 @@
 {
+  "_comment": "Wrap the overworld's final_density with caero_karos_terrain:final_density_seed_themed. The wrap inserts caero_rings:select_by_seed_theme at the root of the noise router's final_density chain; inside themed Voronoi cells the dispatcher hands off to nether_pit_final / end_floating_final, everywhere else it passes through to the original final_density (the lithostitched:wrapped_marker placeholder resolves to whatever the previous final_density was — Tectonic's wrap if Tectonic is loaded, otherwise vanilla overworld).",
   "type": "lithostitched:wrap_noise_router",
   "priority": 10000,
   "dimension": "minecraft:overworld",
   "target": "final_density",
-  "wrapper_function": {
-    "type": "novoatlas:select_by_biome_color",
-    "map_info": "caero_karos:karos",
-    "fallback": {
-      "type": "lithostitched:wrapped_marker"
-    },
-    "selections": [
-      {
-        "colors": [
-          "#EC0101",
-          "#ED0202",
-          "#EE0303",
-          "#EF0404",
-          "#F00505"
-        ],
-        "function": "caero_karos:nether_final"
-      },
-      {
-        "colors": [
-          "#DF08EE",
-          "#E009EF",
-          "#E10AF0",
-          "#E20BF1"
-        ],
-        "function": "caero_karos:end_final"
-      }
-    ]
-  }
+  "wrapper_function": "caero_karos_terrain:final_density_seed_themed"
 }

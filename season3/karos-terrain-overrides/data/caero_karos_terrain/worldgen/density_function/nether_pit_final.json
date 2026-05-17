@@ -1,0 +1,25 @@
+{
+  "_comment": "Nether pit density. The cavernous noise (minecraft:nether/base_3d_noise) contributes ACROSS the whole pit Y range, no Y-band masks — the previous version masked noise to a thin Y=-30..10 slice, and the noise router's vertical interpolation chopped that slice into the visible horizontal-banded 'mesh' pattern. With noise contributing throughout, the pit interior is organic 3D nether terrain (caves, pockets, walls) instead of a layered slice. Solid_floor shapes the bottom (below Y=-40), air_cap forces air above Y=40 — gives a roughly 90-block-tall pit with cavernous nether terrain inside.",
+  "type": "minecraft:add",
+  "argument1": {
+    "_comment": "Solid floor below Y=-50. Ramps to 0 at Y=-40 so the bottom of the pit has lots of solid netherrack — a place to land.",
+    "type": "minecraft:y_clamped_gradient",
+    "from_value":  5.0, "from_y": -50,
+    "to_value":    0.0, "to_y":   -40
+  },
+  "argument2": {
+    "type": "minecraft:add",
+    "argument1": {
+      "_comment": "Air cap above Y=40 — ramps to -30 by Y=60 so anything above the pit is decisively air. Magnitude high enough that the noise router's quart-cell interpolation at the Voronoi rim doesn't grow a thick netherrack lip.",
+      "type": "minecraft:y_clamped_gradient",
+      "from_value":   0.0, "from_y": 40,
+      "to_value":  -30.0, "to_y":   60
+    },
+    "argument2": {
+      "_comment": "nether/base_3d_noise contributing density everywhere (no Y-band mask). Magnitude ~±1. In the pit interior Y=-40..40 where solid_floor and air_cap are both near 0, the noise alone drives density: positive samples are netherrack walls/pillars, negative samples are caves/air pockets. Vanilla nether biome features (lake_lava) fill the air pockets with lava as the world generates.",
+      "type": "minecraft:mul",
+      "argument1": 1.0,
+      "argument2": "minecraft:nether/base_3d_noise"
+    }
+  }
+}

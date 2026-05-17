@@ -3,6 +3,7 @@ package com.caero.rings
 import com.mojang.serialization.MapCodec
 import net.minecraft.core.registries.Registries
 import net.minecraft.world.level.biome.BiomeSource
+import net.minecraft.world.level.levelgen.DensityFunction
 import net.neoforged.bus.api.EventPriority
 import net.neoforged.fml.common.Mod
 import net.neoforged.neoforge.registries.NeoForgeRegistries
@@ -22,6 +23,9 @@ object CaeroRings {
     private val BIOME_MODIFIER_TYPES: DeferredRegister<MapCodec<out BiomeModifier>> =
         DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, MOD_ID)
 
+    private val DENSITY_FUNCTION_TYPES: DeferredRegister<MapCodec<out DensityFunction>> =
+        DeferredRegister.create(Registries.DENSITY_FUNCTION_TYPE, MOD_ID)
+
     val VORONOI_TIERED = BIOME_SOURCES.register(
         "voronoi_tiered",
         Supplier<MapCodec<out BiomeSource>> { VoronoiTieredBiomeSource.CODEC },
@@ -33,9 +37,16 @@ object CaeroRings {
         Supplier<MapCodec<out BiomeModifier>> { IdRemoveFeatures.CODEC },
     )
 
+    @Suppress("unused")
+    val SELECT_BY_SEED_THEME = DENSITY_FUNCTION_TYPES.register(
+        "select_by_seed_theme",
+        Supplier<MapCodec<out DensityFunction>> { SelectBySeedThemeDensityFunction.DATA_CODEC },
+    )
+
     init {
         BIOME_SOURCES.register(MOD_BUS)
         BIOME_MODIFIER_TYPES.register(MOD_BUS)
+        DENSITY_FUNCTION_TYPES.register(MOD_BUS)
         MOD_BUS.addListener(EventPriority.LOWEST, java.util.function.Consumer<RegisterSpawnPlacementsEvent> { DaytimeSpawnOverride.onRegister(it) })
     }
 }

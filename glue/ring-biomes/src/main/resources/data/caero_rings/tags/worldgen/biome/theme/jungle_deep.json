@@ -1,0 +1,6 @@
+{
+  "_comment": "Deep-jungle interior. Single biome only — caero_karos:ancient_jungle — so the entire jungle_deep Voronoi cell renders as ancient_jungle. Previously this pool included RU rainforest + RU tropics; the Worley patch hash split the cell across all three, meaning only ~1/3 of patches were actually ancient_jungle. That made Tree Giant's giant_jungle_tree structure (scoped specifically to caero_karos:ancient_jungle) reject most spawn attempts because the chunk biome didn't match. Single-biome pool fixes that AND makes the ancient_jungle biome the dominant 'large always-present' feature Greg asked for. Cell at seed (4500, 1500) is bounded by jungle_swamp at (4000, 300) and the world border — roughly 1500x1500 blocks of solid ancient_jungle.",
+  "values": [
+    "caero_karos:ancient_jungle"
+  ]
+}

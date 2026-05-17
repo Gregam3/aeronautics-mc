@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "_comment": "Biomes where the sky, sun, moon, stars, and clouds are not rendered and skylight is visually clamped to night-level. Server-side, hostile mob spawn rules also treat these biomes as night regardless of world time.",
+  "values": [
+    "#minecraft:is_nether",
+    "#minecraft:is_end",
+    "caero_karos:ancient_jungle"
+  ]
+}

@@ -30,6 +30,21 @@ TIER_COLOURS = {
     "medium": (230, 185,  80),
     "hard":   (210,  90,  80),
 }
+# Themed-cell tints — when a position resolves to a themed seed cell (past
+# the radius floor), this colour replaces the tier base. Distinctive enough
+# to read on the map; not so saturated it overwhelms the tier palette.
+THEME_COLOURS = {
+    "mountain_high": (180, 195, 220),   # cold high peak — light blue-grey
+    "jungle_outer":  ( 80, 160,  80),   # rich green
+    "jungle_swamp":  ( 90, 130, 110),   # murky teal-green
+    "jungle_deep":   ( 40, 110,  60),   # deeper, denser green
+    "cursed_wastes": (170,  90,  60),   # smouldering red-brown ashen woodland
+    "nether_core":   (110,  30,  30),   # netherrack red — the nether interior
+    "end_islands":   (220, 200, 240),   # pale purple — the End
+    "ocean_warm":    ( 80, 170, 200),   # tropical turquoise
+    "ocean_deep":    ( 30,  80, 160),   # cobalt deep ocean
+    "ocean_abyssal": ( 10,  20,  60),   # near-black abyss
+}
 OCEAN = (60, 90, 140)
 BORDER_COLOUR = (20, 20, 20)
 GUIDE_COLOUR = (255, 255, 255, 160)
@@ -147,7 +162,9 @@ def nearest_seed(x: float, z: float, seeds: list[dict]) -> dict:
 
 
 def render_tier_field(seeds: list[dict], medium_min: int, hard_min: int, jitter: int) -> Image.Image:
-    """Produce the base voronoi tier raster (no overlays), with floor rules applied."""
+    """Produce the base voronoi tier raster (no overlays), with floor rules applied.
+    Themed cells get their theme colour iff the tier wasn't downgraded by the floor
+    — matches the Kotlin rule that themes don't apply inside the radius floor."""
     img = Image.new("RGB", (IMG_SIZE, IMG_SIZE), OCEAN)
     pixels = img.load()
     border_sq = WORLD_HALF * WORLD_HALF
@@ -159,7 +176,11 @@ def render_tier_field(seeds: list[dict], medium_min: int, hard_min: int, jitter:
                 continue  # outside world border stays ocean
             seed = nearest_seed(x, z, seeds)
             tier = apply_floor(seed["tier"], int(x), int(z), dist_sq, medium_min, hard_min, jitter)
-            pixels[px, py] = TIER_COLOURS[tier]
+            theme = seed.get("theme")
+            if theme and tier == seed["tier"] and theme in THEME_COLOURS:
+                pixels[px, py] = THEME_COLOURS[theme]
+            else:
+                pixels[px, py] = TIER_COLOURS[tier]
     return img
 
 
@@ -217,14 +238,20 @@ def annotate(img: Image.Image, seeds: list[dict], medium_min: int) -> Image.Imag
     draw.text((cx + 10, cy - 14), "spawn", fill=(255, 255, 255))
 
     # Legend
-    legend_x, legend_y = 12, IMG_SIZE - 100
-    draw.rectangle((legend_x - 6, legend_y - 6, legend_x + 170, legend_y + 90),
+    entries: list[tuple[str, tuple[int, int, int]]] = (
+        [(f"{t} tier", c) for t, c in TIER_COLOURS.items()]
+        + [(name, colour) for name, colour in THEME_COLOURS.items()]
+    )
+    legend_h = 20 * len(entries) + 36
+    legend_x, legend_y = 12, IMG_SIZE - legend_h - 12
+    draw.rectangle((legend_x - 6, legend_y - 6, legend_x + 200, legend_y + legend_h),
                    fill=(0, 0, 0, 140))
-    for i, (tier, colour) in enumerate(TIER_COLOURS.items()):
+    for i, (label, colour) in enumerate(entries):
         y = legend_y + i * 20
         draw.rectangle((legend_x, y, legend_x + 16, y + 14), fill=colour)
-        draw.text((legend_x + 22, y), f"{tier} tier", fill=(255, 255, 255))
-    draw.text((legend_x, legend_y + 66), "1 px = 10 blocks", fill=(200, 200, 200))
+        draw.text((legend_x + 22, y), label, fill=(255, 255, 255))
+    draw.text((legend_x, legend_y + 20 * len(entries) + 6), "1 px = 10 blocks",
+              fill=(200, 200, 200))
     return out
 
 

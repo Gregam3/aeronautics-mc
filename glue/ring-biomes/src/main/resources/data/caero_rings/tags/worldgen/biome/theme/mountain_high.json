@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "_comment": "Themed seed pool for the 'massive wide mountainous zone where it's all high'. Sampled by VoronoiTieredBiomeSource only when a seed's `theme` field points here. Mixes cold (jagged/frozen) and warm (stony/arid) peaks plus RU verticals (spires, towering_cliffs) so the region is visually varied across the cell. Tectonic does the elevation work — these biomes just supply surface palette and mob spawns.",
+  "values": [
+    "minecraft:jagged_peaks",
+    "minecraft:frozen_peaks",
+    "minecraft:stony_peaks",
+    "minecraft:windswept_hills",
+    "minecraft:windswept_gravelly_hills",
+    "minecraft:snowy_slopes",
+    "regions_unexplored:spires",
+    "regions_unexplored:towering_cliffs",
+    "regions_unexplored:mountains",
+    "regions_unexplored:arid_mountains",
+    "regions_unexplored:chalk_cliffs",
+    "regions_unexplored:pine_slopes"
+  ]
+}

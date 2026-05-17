@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.caero.nether_atmosphere.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MonsterMixin",
+    "NetherFortressStructureMixin"
+  ],
+  "client": [
+    "ClientLevelDataDayTimeMixin",
+    "LevelDayTimeMixin",
+    "LevelRendererMixin",
+    "LightTextureMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

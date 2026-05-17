@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "pack_format": 48,
+    "description": "caero_rings encumbered item weight overrides — datapack overlay (loads after mod data so our values win)"
+  }
+}

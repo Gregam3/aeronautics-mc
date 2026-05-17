@@ -1,0 +1,35 @@
+{
+  "_comment": "Routes final_density per Voronoi seed cell. Inside themed cells, dispatches to the corresponding density override. Everywhere else, lithostitched:wrapped_marker = original overworld final_density (Tectonic + vanilla). The seed list mirrors data/minecraft/dimension/overworld.json's biome_source.seeds — keep in sync.",
+  "type": "caero_rings:select_by_seed_theme",
+  "fallback": {
+    "type": "lithostitched:wrapped_marker"
+  },
+  "seeds": [
+    { "x":     0, "z":     0, "tier": "easy"   },
+
+    { "x":  1800, "z": -1800, "tier": "medium" },
+    { "x":  1900, "z":  1600, "tier": "medium" },
+    { "x": -1500, "z": -1700, "tier": "medium" },
+
+    { "x": -4000, "z":     0, "tier": "hard",   "theme": "mountain_high" },
+    { "x":  3500, "z": -1000, "tier": "medium", "theme": "jungle_outer"  },
+    { "x":  4000, "z":   300, "tier": "medium", "theme": "jungle_swamp"  },
+    { "x":  4500, "z":  1500, "tier": "hard",   "theme": "jungle_deep"   },
+
+    { "x":     0, "z": -3000, "tier": "hard",   "theme": "cursed_wastes" },
+    { "x": -2000, "z": -4500, "tier": "hard",   "theme": "cursed_wastes" },
+    { "x":  2000, "z": -4500, "tier": "hard",   "theme": "cursed_wastes" },
+    { "x":     0, "z": -4500, "tier": "hard",   "theme": "nether_core"   },
+
+    { "x":  4000, "z":  2800, "tier": "hard",   "theme": "end_islands"   },
+
+    { "x":  -700, "z":  2300, "tier": "medium" },
+
+    { "x": -3500, "z": -3500, "tier": "hard"   },
+    { "x":  2500, "z": -3700, "tier": "hard"   }
+  ],
+  "selections": {
+    "nether_core":   "caero_karos_terrain:nether_pit_final",
+    "end_islands":   "caero_karos_terrain:end_floating_final"
+  }
+}

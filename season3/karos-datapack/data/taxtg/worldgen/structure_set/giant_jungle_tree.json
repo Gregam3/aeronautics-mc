@@ -1,0 +1,15 @@
+{
+  "_comment": "Override vanilla taxtg spacing 45/30 → 12/6 so giant jungle trees pack densely in the ancient_jungle biome. Each tree has max_distance_from_center=64 (128-block footprint); at 192-block average spacing they visually merge into a continuous giant canopy — the 'land of giants' Greg asked for. Don't go below 8/4 — trees overlap too much and chunk gen perf degrades.",
+  "structures": [
+    {
+      "structure": "taxtg:giant_jungle_tree",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 12,
+    "separation": 6,
+    "salt": 654931306
+  }
+}

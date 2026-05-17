@@ -375,6 +375,74 @@ runtime-affecting change. Format: `- [date] mod — what changed → what to ver
   you want it hidden too. Sodium is installed; if clouds still show in
   Nether biomes the inject probably lost a priority fight with sodium and
   we'll need an additional sodium-targeted mixin.
+- 2026-05-10 karos terrain-overrides — re-activated
+  (`config/paxi/datapacks/karos-terrain-overrides`, was parked). With
+  this, lithostitched wraps the overworld `final_density` so
+  `caero_karos:nether_final` / `:end_final` actually replace the visible
+  terrain in painted zones, not just the underground caves. Density
+  edits this turn drop the nether ceiling to ~Y=35 (caves above) and
+  push end islands up to Y=222 with void to Y=194 → /tp coords:
+    nether (caves):       /tp -272 36 2176
+    end (floating island): /tp -192 224 -2192
+  Note: there's still water at Y=62 below the end islands because
+  the overworld noise settings have sea_level=63 and we don't override
+  it; visible as "ocean of water below the void". Flag if it bothers
+  you.
+- 2026-05-10 karos mountain_final v16 — vanilla amplified final_density +
+  Y-bias floor (val 10→0 from Y=64..150 — guarantees wall floor at Y=150)
+  + abs(cube(ridges_folded))×12 + abs(cube(jaggedness))×60 (selective peak
+  lift, only ridge cores spike) + cap Y=210..260. Distribution: 67% wall
+  Y=150-159, 27% peaks Y=210+, max Y=223. Player has to climb 86 blocks
+  to enter the band anywhere; once in it, peaks rise another 60+ blocks.
+- 2026-05-10 karos mountain_final v10 — abandoned hand-rolled noise math
+  (which produced alien spike towers) and dropped vanilla
+  `minecraft:overworld/noise_settings/amplified` final_density verbatim into
+  `caero_karos:mountain_final`. lithostitched select_by_biome_color still
+  routes only mountain PNG colors through it. Distribution across 4096
+  sample columns: P50=92, P90=122, P99=154, max=162 — actual amplified
+  mountain shape, no plateau, no towers. → walk it; if peaks feel too short
+  ("massive peaks"), I can stack a positive Y bias to push max to Y=200+
+  while keeping the amplified ridge shape.
+- 2026-05-10 karos mountain_final v9 — rewrote to use abs(cube(ridges_folded)) × 35
+  + abs(cube(jaggedness)) × 120. The cube curve crushes mid-range noise, so
+  only ridge-core columns lift dramatically; most of the band stays at vanilla
+  Y=70-100 plains/foothills. Histogram across 4096 sample columns: P50=85,
+  P90=203, P99=212, max=224. Only ~23% of the band has peaks above Y=200;
+  ~75% is at Y=60-130. → fly the mountain band; should see scattered massive
+  peaks rising 100+ blocks above rolling foothills, NOT a flat plateau wall.
+- 2026-05-10 karos mountain_final density — added a third
+  `lithostitched:wrap_noise_router` (`mountain_density_boost.json`,
+  priority 9000) that swaps overworld `final_density` for mountain
+  greys (#444..48 jagged/frozen, #888..8D stony/windswept) to a custom
+  `caero_karos:mountain_final`. The function adds: gentle Y bias
+  (+1.5 by Y=100), a hard cap above Y=190, and 12 × abs(ridges_folded)
+  for shape variation. Net result in a 4×4-chunk patch sample:
+  jagged_peaks Y=193..225 (mean 207), frozen_peaks Y=209..215. Plains
+  outside the band stays at Y≈70 → a ~130-block cliff at the band
+  edge. → /tp into the band: `/tp -1968 200 0` (jagged_peaks);
+  fly to `/tp -1700 100 0` and look back west — should see a long
+  N-S wall of peaks. Within-chunk variance is small (vanilla
+  4×8-block density interpolation smooths it); chunk-to-chunk
+  variance is what gives the ridge feel.
+- 2026-05-10 caero_nether_atmosphere v3 — added a server-side mixin
+  (`NetherFortressStructureMixin`, `@ModifyArg` on the BlockPos `<init>`
+  call inside `findGenerationPoint`) that overrides vanilla's hardcoded
+  Y=64 fortress anchor down to Y=-10. Mod's mods.toml flipped from
+  client-only to BOTH so the mixin loads on the integrated server.
+  → enter a painted nether zone (e.g. /tp -200 50 2200), explore /
+  pre-generate the area, then `/locate structure minecraft:fortress`.
+  Anchor should report Y=-10ish; dig down from the plains lid to reach
+  fortress pieces buried in netherrack. Existing fortress chunks in
+  already-generated saves won't move — only newly-generated ones use
+  the new Y.
+- 2026-05-10 caero_nether_atmosphere v2 — mixin now also cancels
+  `LevelRenderer.renderSky` (sun+moon+stars+sky dome) in addition to
+  `renderClouds`, AND triggers when player is in OR above a painted
+  nether biome (checks biome at Y=20 and Y=-20 in the same column,
+  catching the case where overhead.above_y=64 paints plains over the
+  nether band). → fly above a nether-painted zone (e.g. /tp -272 100 2200);
+  sky should go nether-fog red, sun gone, no clouds. Walk away into a
+  non-nether biome → sky/sun/clouds reappear immediately.
 - 2026-05-10 karos mask — restored. Moved
   `mods/disabled-karos-painted-mask/novoatlas-karos-*.jar` to `mods/`
   root (NeoForge ignores subfolders; that's why density-function types
@@ -411,3 +479,172 @@ runtime-affecting change. Format: `- [date] mod — what changed → what to ver
   "Failed to load registries" / "Unknown registry key
   novoatlas:select_by_biome_color", and `[paxi/ERROR]` line about the
   missing wrap zip should be gone from `latest.log`.
+- 2026-05-16 seaeater (Sea Myths) — installed `seaeater-1.0.0.jar` and added
+  biome modifiers in `season3/karos-datapack/data/seaeater/neoforge/biome_modifier/`
+  (Sea Eater weight 6, El Gran Maja weight 4, all four vanilla deep-ocean
+  biomes) → boot a karos world, sail/fly across a deep-ocean patch, expect
+  to spot a Sea Eater or El Gran Maja **fairly often but not every time**
+  (rough heuristic: one within ~30s of cruising near Y=40 in a deep biome).
+  Verify neither spawns in shallow ocean / lakes / rivers. Confirm scale
+  drops on kill.
+- 2026-05-16 karos worldgen — overworld dimension JSON switched from
+  `novoatlas:image_map` (heightmap-PNG-driven terrain) to vanilla
+  `minecraft:noise` generator. Biomes still painted via the karos.png
+  mask (`novoatlas:color_map` biome source); `karos-terrain-overrides`
+  Lithostitched modifier now activates and supplies custom density for
+  Nether-color and End-color painted zones. Heightmap PNG is no longer
+  read — `map_info/karos.json` still references it for codec reasons →
+  start a brand-new world with the karos-datapack. Verify: (a) ocean
+  patches in the mask render as actual water at sea-level, not green
+  hills; (b) jagged_peaks / frozen_peaks zones rise to vanilla-mountain
+  heights; (c) painted End zones produce floating-island terrain via
+  `caero_karos:end_final`; (d) painted Nether zones get nether-style
+  terrain via `caero_karos:nether_final`. Re-run
+  `bash season3/test/karos-mapgen/run-audit.sh` after — heightmap-related
+  thresholds (deep-ocean coverage, spawn-Y) should still pass.
+- 2026-05-16 chunky — enabled `Chunky-NeoForge-1.4.23.jar` (was
+  `.disabled`) → boot a world, run `/chunky` in chat, confirm the
+  command registers and `/chunky help` lists subcommands. Use
+  `/chunky start <world> <x> <z> <radius>` to pre-gen a chunk area
+  near spawn; DH should noticeably stop stuttering on chunk-gen.
+- 2026-05-16 karos worldgen audit note — `run-audit.sh` now hits the 60s
+  tick watchdog during forceload because `karos-terrain-overrides`'s
+  `select_by_biome_color` density wrapper is newly active (was a no-op
+  when the generator was `novoatlas:image_map`). PNG sampling per
+  density-function call × 8 simultaneous forceload patches = chunk-gen
+  blowup. Normal gradual chunk loading near a player should be fine; we
+  may need to either (a) cache the biome PNG sample more aggressively
+  in NovoAtlas's color_map provider, or (b) downsample/quartize the
+  mask before the lithostitched wrapper runs. → flag if in-game terrain
+  near the painted Nether/End zones causes player-side stutter.
+- 2026-05-16 caero_atlas — added per-thread last-column cache to
+  `BiomeColorSelectDensityFunction.compute()` so density-function calls
+  along the same (x,z) column reuse the resolved selection index instead
+  of resampling the biome PNG and walking the color list every time.
+  Hot path is now ~1 PNG sample + 1 color match per column (≈256 per
+  chunk) instead of per (x,y,z) eval (≈98k per chunk). Audit passes
+  11/0/2 with the new `minecraft:noise` overworld generator and
+  `karos-terrain-overrides` actively wrapping the noise router → no
+  in-game test strictly required for the perf change, but boot a karos
+  world, walk into a painted Nether or End zone, and confirm chunks
+  load smoothly without per-chunk stutter.
+- 2026-05-16 datapack deploy — repo karos-datapack edits weren't reaching
+  Paxi until now (Paxi has its own copy under `config/paxi/datapacks/`).
+  Added `season3/deploy-datapacks.sh` that rsyncs karos-datapack and
+  karos-terrain-overrides into Paxi. Today's `minecraft:noise` generator
+  switch only takes effect in worlds created AFTER this sync → spin up
+  ANOTHER fresh singleplayer world (the earlier "fresh world" still used
+  the stale image_map dimension JSON). Verify the painted deep-ocean
+  zones now generate as actual water at sea level.
+
+- 2026-05-16 tree-giant + karos-datapack — installed Tree Giant (taxtg
+  2.0.1-neoforge-1.21.1) and added new biome `caero_karos:ancient_jungle`
+  painted onto the deep-green zone of the Karos mask (color `#054E05`).
+  Vanilla `minecraft:trees_jungle` stripped from this biome — only
+  `taxtg:giant_jungle_tree` should spawn there. Spacing tightened to
+  `18/10` for a dense canopy. The other 4 giant species (oak/birch/spruce/
+  cherryblossom) remain at Tree Giant defaults and only spawn in their
+  vanilla biomes. → in-game: (a) `/locate biome caero_karos:ancient_jungle`
+  should resolve; tp there and confirm only giant jungle trees on the
+  ground, no normal jungle trees. (b) `/locate biome minecraft:jungle`
+  separately; tp there and confirm normal jungle trees only, NO giant
+  jungle trees (the "no leak" requirement). (c) The other vanilla biomes
+  with giant tree mappings — forest, birch_forest, taiga, cherry_grove —
+  should show their respective giants where the mask paints them.
+
+- 2026-05-16 kraken-mod — installed Kraken Mod 1.0.0 (`lairhisson_boss`,
+  `.research/kraken-mod/kraken_mod-1.1neoforge-1.21.1.jar`). Adds a single
+  jigsaw "Kraken Lair" structure spawning in `deep_ocean`, `deep_cold_ocean`,
+  `deep_lukewarm_ocean` at default spacing 20/15. Running at mod defaults —
+  no datapack overrides. → in-game: (a) `/locate structure
+  lairhisson_boss:kraken_structure` should resolve; tp there and check the
+  lair art + the kraken's behaviour and animation quality (this is the
+  visual-quality decision point — Sea Eater currently coexists, so you can
+  compare). (b) Confirm the kraken does NOT spawn outside the lair structure.
+  (c) Kill it, pick up the key, find the treasure block inside the lair, open it.
+
+- 2026-05-16 seaeater — **removed** (jar deleted from Prism instance,
+  biome_modifier overrides at `season3/karos-datapack/data/seaeater/`
+  deleted). → in-game: load the world; confirm no `seaeater:*` entities
+  appear (try `/summon seaeater:sea_eater` — should fail "Unknown entity").
+  No save corruption expected since vanilla just drops unknown entity IDs
+  on load.
+
+- 2026-05-16 caero_rings — painted-PNG mask dropped; themed Voronoi seeds
+  added for mountain wall (-4000, 0), jungle pair (3500/-1000, 4000/300,
+  4500/1500) and cursed wastes (0, -4500). Tectonic re-enabled. NovoAtlas
+  + caero_nether_atmosphere disabled in Prism. Fresh world from seed 12345
+  (or any seed — themed seeds are coord-anchored, not seed-anchored).
+  → Verify:
+    (a) Spawn (0, 0) is vanilla forest/plains/meadow, no painted weirdness.
+    (b) Travel west ~3500 blocks → tall snowy/stony peaks (jagged_peaks,
+        frozen_peaks, RU spires/towering_cliffs). Tectonic terrain shape.
+    (c) Travel east ~3500 blocks → standard jungle, then ~500 blocks
+        further east → mangrove/bayou swamp moat, then deeper east →
+        ancient_jungle with Tree Giant trees.
+    (d) Travel north ~4500 blocks → badlands/joshua_desert/ashen mix
+        (the "Nether very far out" — NOT literal nether terrain).
+    (e) The transition between the easy core and any themed cell has a
+        ~400-block band of plain medium biomes (no abrupt cliffs).
+    (f) Render preview: `glue/ring-biomes/renders/tier_voronoi_annotated.png`
+        shows the theme layout. Compare in-world against this map.
+
+- 2026-05-17 caero_rings — Nether/End rendering restored after over-correction.
+  Layout: nether_core seed at (0, -4500) with 3 ashen cursed_wastes wrap
+  seeds at (0, -3000), (-2000, -4500), (2000, -4500). End enclave at
+  (4000, 2800). Lithostitched surface rule paints netherrack/nylium/
+  soul_sand/basalt in nether biomes, end_stone in end biomes. Sky
+  suppression via caero_nether_atmosphere re-enabled.
+  → Verify in-game with a FRESH world (seed 12345 to match audit):
+    (a) Travel north ~3000 blocks → enter ashen woodland / badlands.
+    (b) Continue north past z≈-3750 → cross into netherrack territory
+        with crimson_forest pockets etc. Sky should turn dark/red
+        (caero_nether_atmosphere mixin should kick in standing on
+        is_nether-tagged biomes).
+    (c) Travel SE ~4900 blocks to (4000, 2800) → end_stone surface,
+        end biome effects (dark sky from biome JSON). Terrain shape is
+        currently vanilla Tectonic (NOT floating islands yet — see
+        KAROS_NEXT_PLAN.md for follow-up notes).
+    (d) Confirm spawn area is still vanilla forest/plains (no nether/end
+        leakage near origin). Audit confirms ≥3500b distance from spawn
+        but in-world inspection is the real test.
+
+- 2026-05-17 caero_rings — biome diversity + Nether pit + End floating islands.
+  Three changes:
+  (1) themed cells now ALWAYS substitute (including oceans/rivers/beaches),
+      fixing the "only one nether biome shows" issue. (2) BIOME_PATCH_SCALE
+      dropped 1024 → 512 so each themed cell holds ~16 patches → ~all 5
+      nether biomes / 4 end biomes visible. (3) new caero_rings:select_by_seed_theme
+      density function dispatches final_density per Voronoi seed; nether_core
+      cell uses nether_pit_final.json (pit Y=-30 to Y=70 with cavernous nether
+      density), end_islands cell uses end_floating_final.json (floating islands
+      Y=180-260 above the vanilla ground at Y<140 with an air gap between).
+  → Verify (fresh world, seed 12345):
+    (a) NETHER: travel north past z=-3750 → drop into a deep pit. Walls of
+        netherrack with caverns; floor at Y≈-40 with crimson_forest /
+        soul_sand_valley / basalt_deltas / warped_forest / nether_wastes
+        patches scattered, not just one biome. Sky should be dark/red from
+        the caero_nether_atmosphere mixin.
+    (b) END: travel SE to (4000, 2800). Stand on regular Tectonic ground at
+        Y≈80. Look up: should see giant end_stone islands floating at
+        Y=180-260. Air gap between. End biomes (highlands/midlands/barrens/
+        small_islands) variety visible across the cell. Below the islands is
+        normal overworld terrain (you can walk under them).
+    (c) The pit boundary at the cell edge is a SHARP cliff — player should
+        approach carefully. (If this looks too jarring, smoothing the
+        boundary requires a 5-way blend density wrap; not implemented.)
+    (d) Biome diversity check in non-nether/end themed cells too: the
+      mountain region should show multiple peak biomes; the jungle complex
+      should show jungle, sparse_jungle, bamboo_jungle, RU tropics etc.
+
+- 2026-05-17 caero_nether_atmosphere — extended dark-atmosphere effect to End biomes and generalised the predicate to a biome tag (`caero_nether_atmosphere:dark_atmosphere`, currently includes `#minecraft:is_nether` and `#minecraft:is_end`). Added LightTextureMixin that zeroes skylight contribution in dark biomes so the ground renders as vanilla midnight even at noon. Added MonsterMixin that makes hostile spawn rules treat dark biomes as night (block-light/torch check still applies — lit bases stay safe).
+  → Verify in nether-painted region: at noon the world is as dark as midnight, no sun/moon/clouds/stars visible, only the red fog horizon. Place a torch — area around it stays safe. Wander unlit areas — vanilla hostiles (zombies/skeletons) should spawn during the day. Compare with prior behaviour where nether biomes still rendered bright at noon.
+  → Verify in end-island region (around 4000, 2800 on seed 12345): same darkness/no-sky effect, but with End's dark-purple fog instead of red. Endermen/Phantoms/other vanilla hostiles spawning during day in unlit areas.
+  → Sanity: standing in a normal overworld biome (plains, forest, mountains) the sun, sky, clouds should be unchanged and mobs should NOT spawn at noon. Confirms the tag predicate is gating correctly.
+
+- 2026-05-17 caero_nether_atmosphere — Iris-shader compatibility fix. Added LevelDayTimeMixin (client-side) that forces Level.getDayTime() to return 18000 (midnight) when player is in a dark_atmosphere biome. Shaders' sunAngle uniform derives from time-of-day → they render night sky/lighting naturally; vanilla rendering also goes dark via getSkyDarken being clamped near 0 by the time override. Works with a shader pack loaded.
+  → Verify with shaders ON (Complementary/BSL/SEUS-class pack): walk into nether biome painted region. Sky should snap to night-sky, sun should drop below horizon, world should darken via shader lighting. Same in End biome region.
+  → Verify with shaders OFF: same dark effect via the pre-existing void-sky cancel + LightTextureMixin.
+  → Sanity: stand in a normal overworld biome — sun/clouds/daylight unchanged. Daylight sensors (server-side) should still show real time-of-day power. Beds should sleep at real night, not biome-induced "night".
+
+- 2026-05-17 caero_nether_atmosphere — added `caero_karos:ancient_jungle` to the `dark_atmosphere` biome tag. The existing ancient_jungle setup (giant_jungle_tree densified to 12/6 spacing, jungle_deep ring-biomes theme) is now also dark — sky/sun/clouds suppressed, hostile mobs spawn during day. Restart MC, fly to the jungle_deep cell (around 4500, 1500 on seed 12345), confirm: dark sky, no sun/clouds (without shaders), giant trees visible, mobs spawning at noon in unlit spots.

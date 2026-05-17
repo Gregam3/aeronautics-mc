@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "_comment": "The actual Nether interior — single contiguous Voronoi cell surrounded by cursed_wastes (ashen woodland / badlands) on three sides. All five vanilla nether biomes; the Worley-patch hash picks one per ~1024-block patch inside the cell, so a player exploring the nether sees varied nether terrain — pockets of crimson_forest, soul_sand_valley, basalt_deltas, etc. — rather than a uniform sea of nether_wastes. Surface rules (karos-terrain-overrides/lithostitched/worldgen_modifier/nether_end_surface.json) paint netherrack/nylium/soul_sand/basalt on the column, and the caero_nether_atmosphere mod suppresses overworld sky when the player stands in any nether-tagged biome.",
+  "values": [
+    "minecraft:nether_wastes",
+    "minecraft:crimson_forest",
+    "minecraft:warped_forest",
+    "minecraft:soul_sand_valley",
+    "minecraft:basalt_deltas"
+  ]
+}

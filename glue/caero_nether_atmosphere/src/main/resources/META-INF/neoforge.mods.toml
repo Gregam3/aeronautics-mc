@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Greg"
+description='''
+Client: hides clouds + sky/sun when the local player is in (or above) a
+biome tagged minecraft:is_nether, so karos painted Nether biomes in the
+Overworld feel like the real Nether.
+Server: lowers the hardcoded Y=64 anchor of NetherFortressStructure so
+fortresses sit deep inside the painted nether band instead of floating
+above the plains overhead.
+'''
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[mixins]]
+    config="caero_nether_atmosphere.mixins.json"

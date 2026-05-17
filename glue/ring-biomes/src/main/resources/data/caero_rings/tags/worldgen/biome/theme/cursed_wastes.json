@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "_comment": "The 'ashen approaches' that wrap the Nether core. Multiple cursed_wastes seeds surround the single nether_core seed, so a player walking from spawn toward the far north passes through ashen woodland / badlands before reaching the netherrack interior. No nether biomes here — those are in theme/nether_core.json so the Nether is one solid contiguous Voronoi cell, not a scattered mix.",
+  "values": [
+    "regions_unexplored:ashen_woodland",
+    "minecraft:badlands",
+    "minecraft:eroded_badlands",
+    "minecraft:wooded_badlands",
+    "regions_unexplored:joshua_desert",
+    "regions_unexplored:outback",
+    "regions_unexplored:saguaro_desert",
+    "regions_unexplored:dry_bushland"
+  ]
+}

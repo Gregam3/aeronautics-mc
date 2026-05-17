@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import kotlin.math.hypot
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -14,34 +15,43 @@ import kotlin.test.assertTrue
  * — we test [nearestSeedOf] and [valueNoise2D] directly, which are the same routines
  * the production biome source uses. Keeping these tests pure means they run without
  * booting NeoForge, so they survive `./gradlew test` without a Minecraft bootstrap.
+ *
+ * Themed-seed tests use [Seed.theme] directly and a stub `themes` lookup; the
+ * full BiomeSource codec path needs Minecraft registries so is covered by the
+ * audit harness in `season3/test/karos-mapgen/`.
  */
 class VoronoiTieredBiomeSourceTest {
 
     // Matches the seed layout in data/minecraft/dimension/overworld.json —
-    // kept in sync deliberately so the test catches accidental drift. The
-    // layout is intentionally non-concentric: medium seeds spread across
-    // r ≈ 1700–4200 and hard seeds across r ≈ 3000–4700, so same-radius cells
-    // in different directions can resolve to different tiers.
+    // kept in sync deliberately so the test catches accidental drift.
+    // Themed seeds: mountain west, jungle outer/swamp/deep east, end SE,
+    // cursed_wastes wraps around nether_core in the north. Oceans are NOT
+    // themed — Tectonic's config (continents.ocean_offset, oceans.deep_ocean_depth)
+    // controls global ocean placement and depth. Plus 4 plain medium pockets
+    // and 2 plain hard outer pockets for vanilla biome variety.
     private val defaultSeeds: List<Seed> = listOf(
         Seed(0, 0, Tier.EASY),
 
-        Seed(1700, 200, Tier.MEDIUM),
-        Seed(800, 1900, Tier.MEDIUM),
-        Seed(-1300, 1500, Tier.MEDIUM),
-        Seed(-2200, -600, Tier.MEDIUM),
-        Seed(-700, -2300, Tier.MEDIUM),
-        Seed(1900, -1500, Tier.MEDIUM),
-        Seed(-3500, 2300, Tier.MEDIUM),
-        Seed(3500, -2700, Tier.MEDIUM),
+        Seed(1800, -1800, Tier.MEDIUM),
+        Seed(1900, 1600, Tier.MEDIUM),
+        Seed(-1500, -1700, Tier.MEDIUM),
+        Seed(-700, 2300, Tier.MEDIUM),
 
-        Seed(2700, 1500, Tier.HARD),
-        Seed(-1700, -3000, Tier.HARD),
-        Seed(4200, 800, Tier.HARD),
-        Seed(2200, 3700, Tier.HARD),
-        Seed(-2700, 3500, Tier.HARD),
-        Seed(-4500, -700, Tier.HARD),
-        Seed(-3000, -3300, Tier.HARD),
-        Seed(1100, -4500, Tier.HARD),
+        Seed(-4000, 0, Tier.HARD, "mountain_high"),
+        Seed(3500, -1000, Tier.MEDIUM, "jungle_outer"),
+        Seed(4000, 300, Tier.MEDIUM, "jungle_swamp"),
+        Seed(4500, 1500, Tier.HARD, "jungle_deep"),
+
+        // Cursed Wastes wrap (ashen + badlands) around the nether_core
+        Seed(0, -3000, Tier.HARD, "cursed_wastes"),
+        Seed(-2000, -4500, Tier.HARD, "cursed_wastes"),
+        Seed(2000, -4500, Tier.HARD, "cursed_wastes"),
+        Seed(0, -4500, Tier.HARD, "nether_core"),
+
+        Seed(4000, 2800, Tier.HARD, "end_islands"),
+
+        Seed(-3500, -3500, Tier.HARD),
+        Seed(2500, -3700, Tier.HARD),
     )
 
     @Test
@@ -50,6 +60,7 @@ class VoronoiTieredBiomeSourceTest {
         assertEquals(Tier.EASY, near.tier)
         assertEquals(0, near.x)
         assertEquals(0, near.z)
+        assertNull(near.theme, "easy core seed has no theme")
     }
 
     @Test
@@ -60,12 +71,27 @@ class VoronoiTieredBiomeSourceTest {
     }
 
     @Test
-    fun `distant cells in cardinal directions resolve to hard`() {
-        // Hard seeds at (4200, 800), (-4500, -700), (1100, -4500), (-2700, 3500)
-        // dominate these far cells regardless of which medium pockets exist.
-        assertEquals(Tier.HARD, nearestSeedOf(4500, 0, defaultSeeds).tier)
-        assertEquals(Tier.HARD, nearestSeedOf(-4500, 0, defaultSeeds).tier)
-        assertEquals(Tier.HARD, nearestSeedOf(0, -4500, defaultSeeds).tier)
+    fun `distant cells in cardinal directions land in the intended themed cells`() {
+        // West cardinal hits mountain_high (HARD theme).
+        val west = nearestSeedOf(-4500, 0, defaultSeeds)
+        assertEquals(Tier.HARD, west.tier)
+        assertEquals("mountain_high", west.theme)
+        // North cardinal at z=-4500 sits exactly on the nether_core seed.
+        val north = nearestSeedOf(0, -4500, defaultSeeds)
+        assertEquals(Tier.HARD, north.tier)
+        assertEquals("nether_core", north.theme)
+        // East cardinal lands in the jungle_swamp band — by design the swamp
+        // moat occupies the z≈0 strip between the two jungle seeds, so
+        // east-cardinal travel passes through the moat. That's the "mollet".
+        val east = nearestSeedOf(4500, 0, defaultSeeds)
+        assertEquals(Tier.MEDIUM, east.tier)
+        assertEquals("jungle_swamp", east.theme)
+        // South cardinal at z=4500 — no themed seed there, falls to plain
+        // medium pocket at (-700, 2300). Oceans now handled by Tectonic
+        // naturally, not by themed seeds.
+        val south = nearestSeedOf(0, 4500, defaultSeeds)
+        assertEquals(Tier.MEDIUM, south.tier)
+        assertNull(south.theme, "south cardinal hits the plain medium pocket")
     }
 
     @ParameterizedTest(name = "cell ({0},{1}) expected tier {2}")
@@ -73,12 +99,12 @@ class VoronoiTieredBiomeSourceTest {
         "0, 0, EASY",
         "200, 200, EASY",
         "500, -500, EASY",
-        "1700, 200, MEDIUM",
-        "-1300, 1500, MEDIUM",
-        "800, 1900, MEDIUM",
-        "2700, 1500, HARD",
-        "4200, 800, HARD",
-        "-2700, 3500, HARD",
+        "1800, -1800, MEDIUM",
+        "-1500, -1700, MEDIUM",
+        "1900, 1600, MEDIUM",
+        "-4000, 0, HARD",
+        "0, -4500, HARD",
+        "4500, 1500, HARD",
     )
     fun `tier matches nearest seed for known positions`(x: Int, z: Int, expected: String) {
         val near = nearestSeedOf(x, z, defaultSeeds)
@@ -123,50 +149,90 @@ class VoronoiTieredBiomeSourceTest {
     fun `default seed layout has expected tier counts`() {
         val tiers = defaultSeeds.groupBy { it.tier }.mapValues { it.value.size }
         assertEquals(1, tiers[Tier.EASY], "exactly one easy seed (spawn island)")
-        assertEquals(8, tiers[Tier.MEDIUM], "eight medium seeds spread across mid-radii")
-        assertEquals(8, tiers[Tier.HARD], "eight hard seeds spread across outer radii")
+        assertEquals(6, tiers[Tier.MEDIUM], "six medium seeds (4 plain + 2 themed jungle)")
+        assertEquals(9, tiers[Tier.HARD], "nine hard seeds (2 plain + 2 themed land + 3 cursed wraps + nether + end)")
     }
 
     @Test
-    fun `seed radii span a wide band (non-concentric layout)`() {
-        // The whole point of the new layout: medium and hard seed radii overlap so
-        // there's no clean inner/outer ring split.
-        val mediumRadii = defaultSeeds.filter { it.tier == Tier.MEDIUM }
-            .map { hypot(it.x.toDouble(), it.z.toDouble()) }
-        val hardRadii = defaultSeeds.filter { it.tier == Tier.HARD }
-            .map { hypot(it.x.toDouble(), it.z.toDouble()) }
-        assertTrue(mediumRadii.max() > hardRadii.min(),
-            "medium seeds must reach further out than the closest-in hard seed " +
-                "(med max=${mediumRadii.max()}, hard min=${hardRadii.min()})")
+    fun `themed seeds cover all region intents (land + nether + end)`() {
+        // Themes pinned here so a rename or accidental delete fails fast.
+        // Oceans are intentionally NOT themed — handled by Tectonic config.
+        val themes = defaultSeeds.mapNotNull { it.theme }.toSet()
+        assertEquals(
+            setOf("mountain_high", "jungle_outer", "jungle_swamp", "jungle_deep",
+                  "cursed_wastes", "nether_core", "end_islands"),
+            themes,
+        )
     }
 
     @Test
-    fun `same radius can resolve to different tiers (non-linear bias)`() {
-        // r ≈ 3000 in different directions hits different seeds. Diagonals
-        // toward (2700, 1500) hard seed land in HARD; cardinals miss it and
-        // fall to a medium pocket. Pins the property the new layout exists for.
-        val northeastDiag = nearestSeedOf(2121, 2121, defaultSeeds).tier
-        val north = nearestSeedOf(0, 3000, defaultSeeds).tier
-        assertNotEquals(northeastDiag, north,
-            "same-radius cells in different directions should not all share a tier")
+    fun `nether_core is wrapped by cursed_wastes seeds on south, west, east`() {
+        val nether = defaultSeeds.first { it.theme == "nether_core" }
+        val cursed = defaultSeeds.filter { it.theme == "cursed_wastes" }
+        require(cursed.size == 3) { "expected 3 cursed wrap seeds; got ${cursed.size}" }
+        // South wrap: a cursed seed exists with z > nether.z (closer to spawn)
+        // and similar x — so approaching from spawn you hit ashen first.
+        assertTrue(cursed.any { it.z > nether.z && kotlin.math.abs(it.x) < 1000 },
+            "expected a cursed_wastes seed south of nether_core for the southern approach")
+        // West wrap
+        assertTrue(cursed.any { it.x < nether.x - 500 && kotlin.math.abs(it.z - nether.z) < 1000 },
+            "expected a cursed_wastes seed west of nether_core")
+        // East wrap
+        assertTrue(cursed.any { it.x > nether.x + 500 && kotlin.math.abs(it.z - nether.z) < 1000 },
+            "expected a cursed_wastes seed east of nether_core")
     }
 
     @Test
-    fun `medium min radius downgrades nearby medium cells to easy`() {
-        // Replicates the floor rule from VoronoiTieredBiomeSource.resolveTier(),
-        // ignoring jitter (the dedicated jitter test below covers that).
-        val mediumMinRadius = 1500
-        val mediumMinRSq = mediumMinRadius.toLong() * mediumMinRadius
+    fun `walking north from origin hits cursed_wastes before nether_core`() {
+        // Greg's intent: ashen woodland wraps the nether. The south approach
+        // must encounter at least one cursed_wastes cell before any nether
+        // cell. Sample positions on the +z south→-z north axis past spawn.
+        var sawCursed = false
+        for (z in -1500 downTo -5000 step 200) {
+            val s = nearestSeedOf(0, z, defaultSeeds)
+            if (s.theme == "cursed_wastes") sawCursed = true
+            if (s.theme == "nether_core") {
+                assertTrue(sawCursed,
+                    "at (0, $z) the nearest seed is nether_core but we never saw cursed_wastes" +
+                        " on the way north — ashen wrap missing from approach")
+                return
+            }
+        }
+        // If we never reach nether_core along (0, z), the layout is broken.
+        kotlin.test.fail("never encountered nether_core walking north along x=0")
+    }
 
-        // (1000, 0) is closest to medium seed (1700, 200) at distance ~728,
-        // but only 1000 from origin — inside the easy floor.
-        val x = 1000
-        val z = 0
-        val nearestTier = nearestSeedOf(x, z, defaultSeeds).tier
-        val distSq = x.toLong() * x + z.toLong() * z
-        val floored = if (nearestTier == Tier.MEDIUM && distSq < mediumMinRSq) Tier.EASY else nearestTier
-        assertEquals(Tier.MEDIUM, nearestTier, "sanity: Voronoi alone puts this cell in medium")
-        assertEquals(Tier.EASY, floored, "floor should downgrade medium to easy inside 1500 blocks")
+    @Test
+    fun `nether_core sits at the far edge of the world`() {
+        val nether = defaultSeeds.first { it.theme == "nether_core" }
+        val dist = hypot(nether.x.toDouble(), nether.z.toDouble())
+        assertTrue(dist > 4000.0, "nether_core should be 'very far out' — at $dist, expected > 4000")
+        assertEquals(Tier.HARD, nether.tier, "nether_core should be HARD so floor enforces a long approach")
+    }
+
+    @Test
+    fun `mountain region is on a single side (clear from spawn)`() {
+        val mtn = defaultSeeds.first { it.theme == "mountain_high" }
+        // "Massive wide mountainous zone on one side" — anchor far enough from
+        // origin that the cell extends > 2000 blocks across.
+        val dist = hypot(mtn.x.toDouble(), mtn.z.toDouble())
+        assertTrue(dist > 3000.0, "mountain should be a side region — at $dist, expected > 3000")
+    }
+
+    @Test
+    fun `jungle pair has swamp moat between outer and deep`() {
+        val outer = defaultSeeds.first { it.theme == "jungle_outer" }
+        val deep = defaultSeeds.first { it.theme == "jungle_deep" }
+        val swamp = defaultSeeds.first { it.theme == "jungle_swamp" }
+        // The swamp should be closer to BOTH jungles than they are to each other.
+        // That makes Voronoi place it as the band between them.
+        val outerDeepDist = hypot((outer.x - deep.x).toDouble(), (outer.z - deep.z).toDouble())
+        val outerSwampDist = hypot((outer.x - swamp.x).toDouble(), (outer.z - swamp.z).toDouble())
+        val swampDeepDist = hypot((swamp.x - deep.x).toDouble(), (swamp.z - deep.z).toDouble())
+        assertTrue(outerSwampDist < outerDeepDist,
+            "swamp must lie between outer and deep — outer↔swamp $outerSwampDist vs outer↔deep $outerDeepDist")
+        assertTrue(swampDeepDist < outerDeepDist,
+            "swamp must lie between outer and deep — swamp↔deep $swampDeepDist vs outer↔deep $outerDeepDist")
     }
 
     @Test
@@ -245,9 +311,6 @@ class VoronoiTieredBiomeSourceTest {
 
     @Test
     fun `value noise spans most of its range across the world`() {
-        // Sample a grid wide enough to hit several noise cells and confirm we
-        // see both very low and very high values — proves the floor jitter has
-        // bite, not a near-constant offset.
         var min = Float.MAX_VALUE
         var max = -Float.MAX_VALUE
         for (x in -4500..4500 step 250) {
@@ -273,7 +336,7 @@ class VoronoiTieredBiomeSourceTest {
     }
 
     @Test
-    fun `seed codec round trips`() {
+    fun `seed codec round trips (no theme)`() {
         val seed = Seed(1234, -5678, Tier.HARD)
         val encoded = Seed.CODEC.encodeStart(
             com.mojang.serialization.JsonOps.INSTANCE, seed
@@ -282,5 +345,19 @@ class VoronoiTieredBiomeSourceTest {
             com.mojang.serialization.JsonOps.INSTANCE, encoded
         ).getOrThrow { e -> IllegalStateException("decode failed: $e") }
         assertEquals(seed, decoded)
+        assertNull(decoded.theme, "absent theme should decode as null")
+    }
+
+    @Test
+    fun `seed codec round trips (with theme)`() {
+        val seed = Seed(-4000, 0, Tier.HARD, "mountain_high")
+        val encoded = Seed.CODEC.encodeStart(
+            com.mojang.serialization.JsonOps.INSTANCE, seed
+        ).getOrThrow { e -> IllegalStateException("encode failed: $e") }
+        val decoded = Seed.CODEC.parse(
+            com.mojang.serialization.JsonOps.INSTANCE, encoded
+        ).getOrThrow { e -> IllegalStateException("decode failed: $e") }
+        assertEquals(seed, decoded)
+        assertEquals("mountain_high", decoded.theme)
     }
 }

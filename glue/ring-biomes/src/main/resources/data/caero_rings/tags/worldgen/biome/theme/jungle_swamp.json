@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "_comment": "The 'mollet' — a wet, low-elevation strip separating jungle_outer from jungle_deep. Mangrove + bayou + fen mix gives a swampy / amphibious feel; players cross water and mud to reach the deep-jungle interior. Voronoi places this between the two jungle seeds, so the strip is ~1000-2000 blocks across.",
+  "values": [
+    "minecraft:swamp",
+    "minecraft:mangrove_swamp",
+    "regions_unexplored:bayou",
+    "regions_unexplored:old_growth_bayou",
+    "regions_unexplored:fen",
+    "regions_unexplored:marsh"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "_comment": "Outer ring of the jungle region — standard jungle aesthetics. Pairs with jungle_deep across a Voronoi cell boundary (the 'mollet' Greg described); jungle_swamp sits between them as the wetland separator.",
+  "values": [
+    "minecraft:jungle",
+    "minecraft:sparse_jungle",
+    "minecraft:bamboo_jungle",
+    "regions_unexplored:tropics",
+    "regions_unexplored:rainforest",
+    "regions_unexplored:sparse_rainforest"
+  ]
+}
